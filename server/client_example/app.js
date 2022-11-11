@@ -12,10 +12,19 @@ function log(logdata) {
 
 function start_connection() {
     // location.href
+    if (ws != undefined && (ws.readyState == 2 || ws.readyState == 3)) {
+        ws.onclose = undefined;
+        ws.onerror = undefined;
+        ws.onopen = undefined;
+        ws.onconnect = undefined;
+        ws.onmessage = undefined;
+        ws.close();
+        ws = undefined;
+    }
     if (ws == undefined) {
         log("[CONNECTING] to " + roomid.value + " as " + username.value + " \n");
         ws = new WebSocket("ws://127.0.0.1:8081", []);
-        ws.onclose = (a) => { console.log(a); log("[CLOSED] Code: " + a.code + " Reason: \"" + a.reason + "\"\n");}
+        ws.onclose = (a) => { console.log(a); log("[CLOSED] Code: " + a.code + " Reason: \"" + a.reason + "\"\n"); }
         ws.onerror = (a) => { console.log(a); log("[ERROR]\n"); }
         ws.onopen = (a) => { console.log(a); log("[OPENED]\n"); }
         ws.onconnect = (a) => { console.log(a); log("[CONNECTED] " + a + "\n"); };
@@ -26,11 +35,11 @@ function start_connection() {
     }
 }
 
-function send_data() {
-    if (ws != undefined) {
-        log("[DATA] Data send: " + data.value + "\n");
+function send_message() {
+    if (ws != undefined && ws.readyState == 1) {
+        log("[MESSAGE OUT] Data send: " + data.value + "\n");
         ws.send(data.value);
     } else {
-        log("[DATA] The websocket is not connected.\n");
+        log("[MESSAGE OUT] The websocket is not (Yet?) connected.\n");
     }
 }

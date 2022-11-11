@@ -56,14 +56,14 @@
         <div class="field-body">
           <div class="field">
             <div class="control">
-              <input class="input is-medium" id="data" type="text" placeholder="Data" value="Data">
+              <input class="input is-medium" id="data" type="text" placeholder="Message" value="message">
             </div>
           </div>
         </div>
       </div>
 
       <div class="control" style="text-align: end;">
-        <a id="connect" class="button is-info" onclick="send_data()">
+        <a id="connect" class="button is-info" onclick="send_message()">
           Send
         </a>
       </div>
@@ -73,6 +73,7 @@
       </p>
     </div>
   </section>
+  <script src="cbor.js"></script>
   <script src="app.js"></script>
 </body>
 
