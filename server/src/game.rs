@@ -4,17 +4,27 @@ use std::sync::RwLock;
 
 use tungstenite::Message;
 
+pub enum State {
+    Preparing,  // Preparing the game, accepting
+    Lobby,
+    LobbyReady, // The game can be started
+    Playing,
+    AfterGame,
+}
+
 pub struct Game {
+    state: State,
     name: String,
-    host: Actor,
+    host: RwLock<Actor>,
     players: RwLock<Vec<Actor>>,
 }
 
 impl Game {
     pub fn new(name: String, host: Actor) -> Self {
         Self {
+            state: State::Preparing,
             name,
-            host,
+            host: RwLock::new(host),
             players: RwLock::new(Vec::new()),
         }
     }
@@ -23,7 +33,7 @@ impl Game {
         self.name.as_str()
     }
 
-    pub fn get_host(&mut self) -> &mut Actor {
+    pub fn get_host(&mut self) -> &mut RwLock<Actor> {
         &mut self.host
     }
 
@@ -51,7 +61,7 @@ impl Game {
     }
 
     pub fn handle_host(&mut self) {
-        let msg = self.host.read();
+        let msg = self.host.write().unwrap().read();
         if msg.is_ok() {
             let result = msg.unwrap();
             match result {
@@ -63,5 +73,9 @@ impl Game {
                 Message::Frame(x) => println!("Frame from host {}: {}", self.get_name(), x),
             }
         }
+    }
+
+    pub fn state(self) -> State {
+        self.state
     }
 }
