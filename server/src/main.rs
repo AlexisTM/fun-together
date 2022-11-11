@@ -6,7 +6,6 @@ use std::collections::HashMap;
 use tungstenite::{
     accept_hdr,
     handshake::server::{Request, Response},
-    Message,
 };
 
 pub mod actor;
@@ -22,65 +21,63 @@ fn main() {
     env_logger::init();
     let server = TcpListener::bind("127.0.0.1:8081").unwrap();
     for stream in server.incoming() {
-        spawn(move || {
-            let callback = |req: &Request, mut response: Response| {
-                println!("Received a new ws handshake");
-                println!("The request's path is: {}", req.uri().path());
-                println!("The request's headers are:");
-                for (ref header, _value) in req.headers() {
-                    println!("* {}", header);
-                }
-
-                // Let's add an additional header to our response to the client.
-                let headers = response.headers_mut();
-                headers.append("MyCustomHeader", ":)".parse().unwrap());
-                headers.append("SOME_TUNGSTENITE_HEADER", "header_value".parse().unwrap());
-
-                Ok(response)
-            };
-
-            let key: String = "key".to_string();
-            let name: String = "ID_OF_GAME".to_string();
-            let host_name: String = "host".to_string();
-            let user_name: String = "user".to_string();
-
-            let s = stream.unwrap();
-            s.set_nonblocking(true).unwrap();
-            let websocket = accept_hdr(s, callback).unwrap();
-
-            let available: bool = {
-                let map = GAME_LIST.read().unwrap();
-                map.contains_key(&(key.clone()))
-            };
-            if available {
-                println!("Adding a new user.");
-                // STUCK;
-                let map = GAME_LIST.read().unwrap();
-                let rw_game = map.get(&key).unwrap();
-                let mut game = rw_game.write().unwrap();
-                game.add(Actor::new(user_name, websocket));
-                println!("Added.");
-            } else {
-                {
-                    println!("Creating the game.");
-                    let mut map = GAME_LIST.write().unwrap();
-                    map.insert(
-                        key,
-                        RwLock::new(Game::new(name, Actor::new(host_name, websocket))),
-                    );
-                    println!("Created.");
-                }
-                spawn(move || {
-                    println!("Starting a new game.");
-                    loop {
-                        let new_key: String = "key".to_string();
-                        let map = GAME_LIST.read().unwrap();
-                        let rw_game = map.get(&new_key).unwrap();
-                        let game = rw_game.write().unwrap();
-                        game.handle_actors();
-                    }
-                });
+        let callback = |req: &Request, mut response: Response| {
+            println!("Received a new ws handshake");
+            println!("The request's path is: {}", req.uri().path());
+            println!("The request's headers are:");
+            for (ref header, _value) in req.headers() {
+                println!("* {}", header);
             }
-        });
+
+            // Let's add an additional header to our response to the client.
+            let headers = response.headers_mut();
+            headers.append("MyCustomHeader", ":)".parse().unwrap());
+            headers.append("SOME_TUNGSTENITE_HEADER", "header_value".parse().unwrap());
+
+            Ok(response)
+        };
+
+        let key: String = "key".to_string();
+        let name: String = "ID_OF_GAME".to_string();
+        let host_name: String = "host".to_string();
+        let user_name: String = "user".to_string();
+
+        let s = stream.unwrap();
+        s.set_nonblocking(true).unwrap();
+        let websocket = accept_hdr(s, callback).unwrap();
+
+        let available: bool = {
+            let map = GAME_LIST.read().unwrap();
+            map.contains_key(&(key.clone()))
+        };
+        if available {
+            println!("Adding a new user.");
+            // STUCK;
+            let map = GAME_LIST.read().unwrap();
+            let rw_game = map.get(&key).unwrap();
+            let mut game = rw_game.write().unwrap();
+            game.add(Actor::new(user_name, websocket));
+            println!("Added.");
+        } else {
+            {
+                println!("Creating the game.");
+                let mut map = GAME_LIST.write().unwrap();
+                map.insert(
+                    key,
+                    RwLock::new(Game::new(name, Actor::new(host_name, websocket))),
+                );
+                println!("Created.");
+            }
+            spawn(move || {
+                println!("Starting a new game.");
+                loop {
+                    let new_key: String = "key".to_string();
+                    let map = GAME_LIST.read().unwrap();
+                    let rw_game = map.get(&new_key).unwrap();
+                    let game = rw_game.write().unwrap();
+                    game.handle_actors();
+                }
+            });
+        }
     }
 }
