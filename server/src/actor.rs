@@ -1,4 +1,4 @@
-use std::net::TcpStream;
+use std::{net::TcpStream};
 use tungstenite::{Error, Message, WebSocket};
 
 pub struct Actor {
@@ -8,7 +8,10 @@ pub struct Actor {
 
 impl Actor {
     pub fn new(name: String, ws: WebSocket<TcpStream>) -> Self {
-        Self { name, ws }
+        Self {
+            name,
+            ws: ws,
+        }
     }
 
     pub fn get_name(&self) -> &str {

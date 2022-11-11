@@ -76,20 +76,8 @@ fn main() {
                         let new_key: String = "key".to_string();
                         let map = GAME_LIST.read().unwrap();
                         let rw_game = map.get(&new_key).unwrap();
-                        let mut game = rw_game.write().unwrap();
-
-                        let msg = game.get_host().read();
-                        if msg.is_ok() {
-                            let result = msg.unwrap();
-                            match result {
-                                Message::Text(x) => println!("Text: {}", x),
-                                Message::Binary(b) => println!("Binary: {:?}", b),
-                                Message::Ping(x) => println!("Ping: {:?}", x),
-                                Message::Pong(x) => println!("Pong: {:?}", x),
-                                Message::Close(x) => println!("Close: {:?}", x),
-                                Message::Frame(x) => println!("Frame: {}", x),
-                            }
-                        }
+                        let game = rw_game.write().unwrap();
+                        game.handle_actors();
                     }
                 });
             }
