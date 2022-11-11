@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello Bulma!</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+</head>
+
+<body>
+  <section class="section">
+    <div class="container">
+      <h1 class="title">
+        Fun together!
+        <br>
+      </h1>
+
+      <p>
+      <div class="field is-horizontal">
+        <div class="field-label is-medium">
+          <label class="label">Room ID</label>
+        </div>
+        <div class="field-body">
+          <div class="field">
+            <div class="control">
+              <input class="input is-medium" id="roomid" type="text" placeholder="Room ID" value="ROOM_ID">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="field is-horizontal">
+        <div class="field-label is-medium">
+          <label class="label">Username</label>
+        </div>
+        <div class="field-body">
+          <div class="field">
+            <div class="control">
+              <input class="input is-medium" id="username" type="text" placeholder="Username" value="Username">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="control" style="text-align: end;">
+        <a id="connect" class="button is-info" onclick="start_connection()">
+          Connect
+        </a>
+      </div>
+
+      <br />
+      <div class="field is-horizontal">
+        <div class="field-label is-medium">
+          <label class="label">Data</label>
+        </div>
+        <div class="field-body">
+          <div class="field">
+            <div class="control">
+              <input class="input is-medium" id="data" type="text" placeholder="Data" value="Data">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="control" style="text-align: end;">
+        <a id="connect" class="button is-info" onclick="send_data()">
+          Send
+        </a>
+      </div>
+
+      <br />
+      <textarea id="console_output" class="textarea" placeholder="Client output" rows="10"></textarea>
+      </p>
+    </div>
+  </section>
+  <script src="app.js"></script>
+</body>
+
+</html>
