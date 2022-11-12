@@ -1,8 +1,11 @@
-use std::net::TcpStream;
+use std::{net::TcpStream, result};
 use tungstenite::{Error, Message, WebSocket};
+
+use crate::comm::{GameRequest, GameResponse};
 
 pub struct Actor {
     name: String,
+    ready: bool,
     ws: WebSocket<TcpStream>,
 }
 
@@ -19,7 +22,11 @@ pub fn debug_msg(msg: Message) {
 
 impl Actor {
     pub fn new(name: String, ws: WebSocket<TcpStream>) -> Self {
-        Self { name, ws: ws }
+        Self {
+            name,
+            ready: false,
+            ws,
+        }
     }
 
     pub fn get_name(&self) -> &str {
@@ -31,13 +38,23 @@ impl Actor {
     }
 
     // Read as text
-    pub fn read_text(&mut self) -> Option<String> {
+    pub fn read_response(&mut self) -> Option<GameResponse> {
         let msg = self.ws.read_message();
-        if msg.is_ok() {
+        let string_msg = if msg.is_ok() {
             let result = msg.unwrap();
             match result {
                 Message::Text(x) => Some(x),
                 _ => None,
+            }
+        } else {
+            None
+        };
+
+        if let Some(val) = string_msg {
+            let json: Result<GameResponse, _> = serde_json::from_str(val.as_str());
+            match json {
+                Ok(valid_json) => return Some(valid_json),
+                Err(_) => return None,
             }
         } else {
             None
@@ -50,5 +67,17 @@ impl Actor {
 
     pub fn write_message(&mut self, data: Message) {
         self.ws.write_message(data).unwrap();
+    }
+
+    pub fn maintain_connection(&mut self) {
+        self.ws.write_pending().unwrap()
+    }
+
+    pub fn ready(&self) -> bool {
+        self.ready
+    }
+
+    pub fn set_ready(&mut self) {
+        self.ready = true;
     }
 }

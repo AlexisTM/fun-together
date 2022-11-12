@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
-use serde_cbor;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum Action {
-    Idle,            // Idle
-    Stop,            // Stop doing what you were doing?
-    Timeout,         // Stop because of a Timeout
-    RequestText,     // Request the user for a text
-    AnnotateImage,   // Request the user to anotate an image
-    Show,            // Show an image
+    Idle,          // Idle
+    Start,         // Start the game, from host
+    Stop,          // Stop the game, from host
+    Timeout,       // Stop because of a Timeout
+    RequestText,   // Request the user for a text
+    AnnotateImage, // Request the user to anotate an image
+    Show,          // Show an image
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -18,8 +18,10 @@ pub enum GameState {
     LobbyReady, // The game can be started
     Playing,    // Playing
     AfterGame,  // Shows stats & propose to replay
+    Stopping,   // Stopping the game
 }
 
+// From the clients & the host
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GameResponse {
     id: String,         // Same ID as the request
@@ -29,6 +31,14 @@ pub struct GameResponse {
     data: Vec<u8>,      // Array for large amount of data
 }
 
+// From the clients & the host
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GameResponseWithSource {
+    pub source: String,
+    pub msg: GameResponse,
+}
+
+// To the clients & the host
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GameRequest {
     id: String,          // Unique identifier

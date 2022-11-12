@@ -9,8 +9,8 @@ use tungstenite::{
 };
 
 pub mod actor;
-pub mod game;
 pub mod comm;
+pub mod game;
 
 use crate::actor::Actor;
 use crate::game::Game;
