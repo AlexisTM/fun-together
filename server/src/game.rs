@@ -3,7 +3,7 @@ use crate::comm::{GameAction, GameRequest, GameResponse, GameResponseWithSource,
 
 use std::sync::RwLock;
 
-use tungstenite::protocol::frame::coding::{CloseCode};
+use tungstenite::protocol::frame::coding::CloseCode;
 use tungstenite::Message;
 
 pub struct Game {
@@ -78,7 +78,10 @@ impl Game {
                 if host.ready() {
                     self.state = GameState::Lobby;
                 }
-            } // Preparing the game, accepting
+                players.iter_mut().for_each(|player| {
+                    player.set_score(0);
+                });
+            } // Resettting the game data, & accepting
             GameState::Lobby => {
                 let enough_players =
                     players.len() >= self.min_players && players.len() <= self.max_players;

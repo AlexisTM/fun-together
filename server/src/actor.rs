@@ -9,6 +9,7 @@ use crate::comm::{GameRequest, GameResponse};
 pub struct Actor {
     name: String,
     ready: bool,
+    score: i32,
     ws: WebSocket<TcpStream>,
 }
 
@@ -28,6 +29,7 @@ impl Actor {
         Self {
             name,
             ready: false,
+            score: 0,
             ws,
         }
     }
@@ -78,6 +80,18 @@ impl Actor {
 
     pub fn set_ready(&mut self) {
         self.ready = true;
+    }
+
+    pub fn set_score(&mut self, score: i32) {
+        self.score = score;
+    }
+
+    pub fn add_score(&mut self, score: i32) {
+        self.score += score;
+    }
+
+    pub fn score(&self) -> i32 {
+        self.score
     }
 
     pub fn disconnect(&mut self, code: CloseCode) {
