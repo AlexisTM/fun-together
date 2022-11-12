@@ -2,7 +2,6 @@ use crate::actor::Actor;
 use crate::comm::{GameRequest, GameResponse, GameResponseWithSource, GameState};
 
 use std::sync::RwLock;
-use std::vec;
 
 use tungstenite::Message;
 
@@ -84,7 +83,7 @@ impl Game {
         let host_message = host.read_response();
         let mut messages: Vec<GameResponseWithSource> = Vec::new();
         players.iter_mut().for_each(|player| {
-            if let Some(mut result) = player.read_response() {
+            if let Some(result) = player.read_response() {
                 messages.push(GameResponseWithSource {
                     msg: result,
                     source: player.get_name().to_string(),
@@ -121,18 +120,5 @@ impl Game {
             GameState::AfterGame => {} // Shows stats & propose to replay
             GameState::Stopping => {}  // Shows stats & propose to replay
         }
-    }
-
-    pub fn update_preparing(&self) {}
-    pub fn update_lobby(&self) {}
-    pub fn update_playing(&self) {}
-    pub fn update_aftergame(&self) {}
-
-    fn maintain_connection(&self) {
-        let mut players = self.players.write().unwrap();
-        players
-            .iter_mut()
-            .for_each(|player| player.maintain_connection());
-        self.host.write().unwrap().maintain_connection();
     }
 }

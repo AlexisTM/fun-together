@@ -1,4 +1,4 @@
-use std::{net::TcpStream, result};
+use std::{net::TcpStream};
 use tungstenite::{Error, Message, WebSocket};
 
 use crate::comm::{GameRequest, GameResponse};
@@ -67,10 +67,6 @@ impl Actor {
 
     pub fn write_message(&mut self, data: Message) {
         self.ws.write_message(data).unwrap();
-    }
-
-    pub fn maintain_connection(&mut self) {
-        self.ws.write_pending().unwrap()
     }
 
     pub fn ready(&self) -> bool {
