@@ -6,6 +6,7 @@ pub enum GameAction {
     Start,         // Start the game, from host
     Countdown,     // Sends a countdown request to host, host send Countdown back when done
     Replay,        // Play again (from AfterGame screen)
+    ReplayNew,     // Replay with different players (keep the host, remove players)
     Stop,          // Stop the game, from host
     Timeout,       // Stop because of a Timeout
     RequestText,   // Request the user for a text

@@ -1,5 +1,8 @@
-use std::{net::TcpStream};
-use tungstenite::{Error, Message, WebSocket};
+use std::{borrow::Cow, net::TcpStream};
+use tungstenite::{
+    protocol::{frame::coding::CloseCode, CloseFrame},
+    Error, Message, WebSocket,
+};
 
 use crate::comm::{GameRequest, GameResponse};
 
@@ -41,7 +44,7 @@ impl Actor {
     pub fn read_response(&mut self) -> Option<GameResponse> {
         let msg = self.ws.read_message();
         let string_msg = if msg.is_ok() {
-            let result = msg.unwrap();
+            let result = msg.unwrap_or(Message::Text("".to_string()));
             match result {
                 Message::Text(x) => Some(x),
                 _ => None,
@@ -62,11 +65,11 @@ impl Actor {
     }
 
     pub fn write(&mut self, data: String) {
-        self.ws.write_message(Message::Text(data)).unwrap();
+        self.ws.write_message(Message::Text(data)).unwrap_or(());
     }
 
     pub fn write_message(&mut self, data: Message) {
-        self.ws.write_message(data).unwrap();
+        self.ws.write_message(data).unwrap_or(());
     }
 
     pub fn ready(&self) -> bool {
@@ -75,5 +78,15 @@ impl Actor {
 
     pub fn set_ready(&mut self) {
         self.ready = true;
+    }
+
+    pub fn disconnect(&mut self, code: CloseCode) {
+        let reason = Cow::Borrowed("Bye! <3");
+        self.ws
+            .close(Some(CloseFrame {
+                code: code,
+                reason: reason,
+            }))
+            .unwrap_or(());
     }
 }

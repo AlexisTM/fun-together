@@ -3,6 +3,7 @@ use crate::comm::{GameAction, GameRequest, GameResponse, GameResponseWithSource,
 
 use std::sync::RwLock;
 
+use tungstenite::protocol::frame::coding::{CloseCode};
 use tungstenite::Message;
 
 pub struct Game {
@@ -34,14 +35,15 @@ impl Game {
         &mut self.host
     }
 
-    pub fn add(&mut self, player: Actor) -> bool {
-        let players =  self.players.write().unwrap();
+    pub fn add(&mut self, mut player: Actor) -> bool {
+        let mut players = self.players.write().unwrap();
         if players.len() < self.max_players {
             if self.state == GameState::Lobby || self.state == GameState::LobbyReady {
                 players.push(player);
                 return true;
             }
         }
+        player.disconnect(CloseCode::Error);
         return false;
     }
 
@@ -56,7 +58,7 @@ impl Game {
         let host_message = host.read_response();
         let mut messages: Vec<GameResponseWithSource> = Vec::new();
 
-        if let Some(msg) = host_message {
+        if let Some(msg) = &host_message {
             if msg.action == GameAction::Stop {
                 self.state = GameState::Stopping;
             }
@@ -95,14 +97,14 @@ impl Game {
                     self.state = GameState::Lobby;
                 }
 
-                if let Some(msg) = host_message {
+                if let Some(msg) = &host_message {
                     if msg.action == GameAction::Start {
                         self.state = GameState::LobbyReadyCountdown;
                     }
                 }
             } // The game can be started
             GameState::LobbyReadyCountdown => {
-                if let Some(msg) = host_message {
+                if let Some(msg) = &host_message {
                     if msg.action == GameAction::Countdown {
                         self.state = GameState::Playing;
                     }
@@ -112,21 +114,30 @@ impl Game {
                 // Logic!!
             }
             GameState::AfterGame => {
-                if let Some(msg) = host_message {
+                if let Some(msg) = &host_message {
                     if msg.action == GameAction::Replay {
                         self.state = GameState::Playing;
+                    } else if msg.action == GameAction::ReplayNew {
+                        players.iter_mut().for_each(|player| {
+                            player.disconnect(CloseCode::Away);
+                        });
+                        self.state = GameState::Preparing;
+                    } else if msg.action == GameAction::ReplayNew {
+                        self.state = GameState::Stopping;
                     }
                 }
             } // Shows stats & propose to replay
             GameState::Stopping => {
-                // Cleanup of the game and destruction of all sessions
+                players.iter_mut().for_each(|player| {
+                    player.disconnect(CloseCode::Away);
+                });
+                host.disconnect(CloseCode::Away);
             } // Cleanup of the game and destruction of all sessions
             GameState::Stopped => {
                 // Nothing to do
                 return false;
             } // Cleanup of the game and destruction of all sessions
         }
-
         return true;
     }
 }

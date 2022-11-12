@@ -75,8 +75,8 @@ fn main() {
                     let new_key: String = "key".to_string();
                     let map = GAME_LIST.read().unwrap();
                     let rw_game = map.get(&new_key).unwrap();
-                    let game = rw_game.write().unwrap();
-                    game.handle_actors();
+                    let mut game = rw_game.write().unwrap();
+                    game.update();
                 }
             });
         }
