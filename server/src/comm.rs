@@ -24,11 +24,11 @@ pub enum GameState {
 // From the clients & the host
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GameResponse {
-    id: String,         // Same ID as the request
-    action: Action,     // Action that was requested
-    texte: Vec<String>, // Inputs
-    width: u16,         // Width of the following data
-    data: Vec<u8>,      // Array for large amount of data
+    pub id: String,         // Same ID as the request
+    pub action: Action,     // Action that was requested
+    pub texte: Vec<String>, // Inputs
+    pub width: u16,         // Width of the following data
+    pub data: Vec<u8>,      // Array for large amount of data
 }
 
 // From the clients & the host
@@ -41,12 +41,12 @@ pub struct GameResponseWithSource {
 // To the clients & the host
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GameRequest {
-    id: String,          // Unique identifier
-    action: Action,      // The action to be done
-    title: String,       // Title of the action
-    description: String, // Some description of what needs to be done (optional)
-    size: i32,           // Action specific, typically the number of replies (such as )
-    width: u16,          // Width of the data (for images)
-    data: Vec<u8>,       // Data provided with the action
-    time_s: i32,         // Time available for the action
+    pub id: String,          // Unique identifier
+    pub action: Action,      // The action to be done
+    pub title: String,       // Title of the action
+    pub description: String, // Some description of what needs to be done (optional)
+    pub size: i32,           // Action specific, typically the number of replies (such as )
+    pub width: u16,          // Width of the data (for images)
+    pub data: Vec<u8>,       // Data provided with the action
+    pub time_s: i32,         // Time available for the action
 }
