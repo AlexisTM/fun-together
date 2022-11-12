@@ -10,6 +10,7 @@ use tungstenite::{
 
 pub mod actor;
 pub mod game;
+pub mod comm;
 
 use crate::actor::Actor;
 use crate::game::Game;
@@ -64,7 +65,7 @@ fn main() {
                 let mut map = GAME_LIST.write().unwrap();
                 map.insert(
                     key,
-                    RwLock::new(Game::new(name, Actor::new(host_name, websocket))),
+                    RwLock::new(Game::new(name, Actor::new(host_name, websocket), 2, 10)),
                 );
                 println!("Created.");
             }

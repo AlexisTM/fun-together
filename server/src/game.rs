@@ -1,31 +1,28 @@
 use crate::actor::Actor;
+use crate::comm::{GameRequest, GameResponse, GameState};
 
 use std::sync::RwLock;
 
 use tungstenite::Message;
 
-pub enum State {
-    Preparing,  // Preparing the game, accepting
-    Lobby,
-    LobbyReady, // The game can be started
-    Playing,
-    AfterGame,
-}
-
 pub struct Game {
-    state: State,
+    state: GameState,
     name: String,
     host: RwLock<Actor>,
     players: RwLock<Vec<Actor>>,
+    min_players: u16,
+    max_players: u16,
 }
 
 impl Game {
-    pub fn new(name: String, host: Actor) -> Self {
+    pub fn new(name: String, host: Actor, min_players: u16, max_players: u16) -> Self {
         Self {
-            state: State::Preparing,
+            state: GameState::Preparing,
             name,
             host: RwLock::new(host),
             players: RwLock::new(Vec::new()),
+            min_players,
+            max_players,
         }
     }
 
@@ -75,7 +72,24 @@ impl Game {
         }
     }
 
-    pub fn state(self) -> State {
+    pub fn state(self) -> GameState {
         self.state
     }
+
+    pub fn update(self) {
+        if self.state == GameState::LobbyReady {}
+
+        match self.state {
+            GameState::Preparing => self.update_preparing(), // Preparing the game, accepting
+            GameState::Lobby => self.update_lobby(),         // Accepts new players
+            GameState::LobbyReady => self.update_lobby(),    // The game can be started
+            GameState::Playing => self.update_playing(),     // Playing
+            GameState::AfterGame => self.update_aftergame(), // Shows stats & propose to replay
+        }
+    }
+
+    pub fn update_preparing(self) {}
+    pub fn update_lobby(self) {}
+    pub fn update_playing(self) {}
+    pub fn update_aftergame(self) {}
 }
