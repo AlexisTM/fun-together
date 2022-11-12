@@ -1,5 +1,5 @@
 use crate::actor::Actor;
-use crate::comm::{GameRequest, GameResponse, GameResponseWithSource, GameState};
+use crate::comm::{GameAction, GameRequest, GameResponse, GameResponseWithSource, GameState};
 
 use std::sync::RwLock;
 
@@ -34,15 +34,22 @@ impl Game {
         &mut self.host
     }
 
-    pub fn add(&mut self, player: Actor) {
-        self.players.write().unwrap().push(player);
+    pub fn add(&mut self, player: Actor) -> bool {
+        let players =  self.players.write().unwrap();
+        if players.len() < self.max_players {
+            if self.state == GameState::Lobby || self.state == GameState::LobbyReady {
+                players.push(player);
+                return true;
+            }
+        }
+        return false;
     }
 
     pub fn state(self) -> GameState {
         self.state
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> bool {
         let mut players = self.players.write().unwrap();
         let mut host = self.host.write().unwrap();
 
@@ -50,7 +57,9 @@ impl Game {
         let mut messages: Vec<GameResponseWithSource> = Vec::new();
 
         if let Some(msg) = host_message {
-
+            if msg.action == GameAction::Stop {
+                self.state = GameState::Stopping;
+            }
         }
         players.iter_mut().for_each(|player| {
             if let Some(result) = player.read_response() {
@@ -85,10 +94,39 @@ impl Game {
                 if !enough_players || !everybody_ready {
                     self.state = GameState::Lobby;
                 }
+
+                if let Some(msg) = host_message {
+                    if msg.action == GameAction::Start {
+                        self.state = GameState::LobbyReadyCountdown;
+                    }
+                }
             } // The game can be started
-            GameState::Playing => {}   // Playing
-            GameState::AfterGame => {} // Shows stats & propose to replay
-            GameState::Stopping => {}  // Shows stats & propose to replay
+            GameState::LobbyReadyCountdown => {
+                if let Some(msg) = host_message {
+                    if msg.action == GameAction::Countdown {
+                        self.state = GameState::Playing;
+                    }
+                }
+            } // Playing
+            GameState::Playing => {
+                // Logic!!
+            }
+            GameState::AfterGame => {
+                if let Some(msg) = host_message {
+                    if msg.action == GameAction::Replay {
+                        self.state = GameState::Playing;
+                    }
+                }
+            } // Shows stats & propose to replay
+            GameState::Stopping => {
+                // Cleanup of the game and destruction of all sessions
+            } // Cleanup of the game and destruction of all sessions
+            GameState::Stopped => {
+                // Nothing to do
+                return false;
+            } // Cleanup of the game and destruction of all sessions
         }
+
+        return true;
     }
 }

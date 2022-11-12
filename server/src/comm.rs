@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub enum Action {
+pub enum GameAction {
     Idle,          // Idle
     Start,         // Start the game, from host
+    Countdown,     // Sends a countdown request to host, host send Countdown back when done
+    Replay,        // Play again (from AfterGame screen)
     Stop,          // Stop the game, from host
     Timeout,       // Stop because of a Timeout
     RequestText,   // Request the user for a text
@@ -13,19 +15,21 @@ pub enum Action {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum GameState {
-    Preparing,  // Preparing the game, accepting
-    Lobby,      // Accepts new players
-    LobbyReady, // The game can be started
-    Playing,    // Playing
-    AfterGame,  // Shows stats & propose to replay
-    Stopping,   // Stopping the game
+    Preparing,           // Preparing the game, accepting
+    Lobby,               // Accepts new players
+    LobbyReady,          // The game can be started
+    LobbyReadyCountdown, // The game can be started
+    Playing,             // Playing
+    AfterGame,           // Shows stats & propose to replay
+    Stopping,            // Stopping the game
+    Stopped,             // Please destroy this instance
 }
 
 // From the clients & the host
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GameResponse {
     pub id: String,         // Same ID as the request
-    pub action: Action,     // Action that was requested
+    pub action: GameAction, // Action that was requested
     pub texte: Vec<String>, // Inputs
     pub width: u16,         // Width of the following data
     pub data: Vec<u8>,      // Array for large amount of data
@@ -42,7 +46,7 @@ pub struct GameResponseWithSource {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GameRequest {
     pub id: String,          // Unique identifier
-    pub action: Action,      // The action to be done
+    pub action: GameAction,  // The action to be done
     pub title: String,       // Title of the action
     pub description: String, // Some description of what needs to be done (optional)
     pub size: i32,           // Action specific, typically the number of replies (such as )
