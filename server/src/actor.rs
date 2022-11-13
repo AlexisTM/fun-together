@@ -1,4 +1,5 @@
 use std::{borrow::Cow, net::TcpStream};
+use serde::Serialize;
 use tungstenite::{
     protocol::{frame::coding::CloseCode, CloseFrame},
     Error, Message, WebSocket,
@@ -63,6 +64,14 @@ impl Actor {
             }
         } else {
             None
+        }
+    }
+
+    pub fn send_request<T: Serialize>(&mut self, data: &T) {
+        if let Ok(msg) = serde_json::to_string(data) {
+            self.ws.write_message(Message::Text(msg)).unwrap_or(());
+        } else {
+            // Error serilizing
         }
     }
 
