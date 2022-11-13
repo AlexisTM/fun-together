@@ -2,7 +2,47 @@ use std::{default::Default, fmt};
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+pub enum GameState {
+    #[default]
+    Preparing, // Preparing the game, accepting
+    Lobby,      // Accepts new players
+    LobbyReady, // The game can be started
+    Playing,    // Playing
+    Stopping,   // Closing connections
+    Stopped,    // Please destroy this instance
+}
+
 /// Version 3
+/// The game has full control of the comms
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub enum Command {
+    Prepare {
+        min_players: u32,
+        max_players: u32,
+    }, // Prepares a game
+    PrepareReply {
+        key: String, // The game key
+    },
+    Start(), // Prevent players to join from this point on
+    State {
+        players: Vec<u32>,
+        state: GameState,
+    },
+    Kick {
+        player: u32,
+    },
+    Stop(),
+    // Playing data:
+    From {
+        from: u32,
+        data: String,
+    },
+    To {
+        to: Vec<u32>,
+        data: String,
+    },
+}
 
 /// Version 1
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
@@ -19,19 +59,6 @@ pub enum GameAction {
     RequestText,   // Request the user for a text
     AnnotateImage, // Request the user to anotate an image
     Show,          // Show an image
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default, Clone)]
-pub enum GameState {
-    #[default]
-    Preparing, // Preparing the game, accepting
-    Lobby,               // Accepts new players
-    LobbyReady,          // The game can be started
-    LobbyReadyCountdown, // The game can be started
-    Playing,             // Playing
-    AfterGame,           // Shows stats & propose to replay
-    Stopping,            // Stopping the game
-    Stopped,             // Please destroy this instance
 }
 
 // From the clients & the host
@@ -83,7 +110,7 @@ pub struct Image {
 
 /// Version 2
 #[derive(Serialize, Deserialize, Debug)]
-pub enum MsgImpl {
+pub enum Msg2Impl {
     /// Host
     Idle, // To
     Countdown {
@@ -124,20 +151,20 @@ pub enum MsgImpl {
     DrawResponse(Image), // From
 }
 
-impl fmt::Display for MsgImpl {
+impl fmt::Display for Msg2Impl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Msg {
+pub struct Msg2 {
     cmd: String,
-    data: MsgImpl,
+    data: Msg2Impl,
 }
 
-impl Msg {
-    pub fn new(data: MsgImpl) -> Self {
+impl Msg2 {
+    pub fn new(data: Msg2Impl) -> Self {
         Self {
             cmd: data.to_string(),
             data,

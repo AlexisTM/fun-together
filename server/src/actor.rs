@@ -1,16 +1,14 @@
-use std::{borrow::Cow, net::TcpStream};
 use serde::Serialize;
+use std::{borrow::Cow, net::TcpStream};
 use tungstenite::{
     protocol::{frame::coding::CloseCode, CloseFrame},
     Error, Message, WebSocket,
 };
 
-use crate::comm::{GameResponse};
+use crate::comm::{GameResponse, Command};
 
 pub struct Actor {
-    name: String,
-    ready: bool,
-    score: i32,
+    id: u32,
     ws: WebSocket<TcpStream>,
 }
 
@@ -26,17 +24,11 @@ pub fn debug_msg(msg: Message) {
 }
 
 impl Actor {
-    pub fn new(name: String, ws: WebSocket<TcpStream>) -> Self {
+    pub fn new(id: u32, ws: WebSocket<TcpStream>) -> Self {
         Self {
-            name,
-            ready: false,
-            score: 0,
+            id,
             ws,
         }
-    }
-
-    pub fn get_name(&self) -> &str {
-        self.name.as_str()
     }
 
     pub fn read(&mut self) -> Result<Message, Error> {
@@ -44,10 +36,10 @@ impl Actor {
     }
 
     // Read as text
-    pub fn read_response(&mut self) -> Option<GameResponse> {
+    pub fn read_command(&mut self) -> Option<Command> {
         let msg = self.ws.read_message();
         let string_msg = if msg.is_ok() {
-            let result = msg.unwrap_or_else(|_| Message::Text("".to_string()));
+            let result = msg.unwrap_or_else(|_| Message::Ping(vec![]));
             match result {
                 Message::Text(x) => Some(x),
                 _ => None,
@@ -57,10 +49,23 @@ impl Actor {
         };
 
         if let Some(val) = string_msg {
-            let json: Result<GameResponse, _> = serde_json::from_str(val.as_str());
+            let json: Result<Command, _> = serde_json::from_str(val.as_str());
             match json {
                 Ok(valid_json) => Some(valid_json),
                 Err(_) => None,
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn read_text(&mut self) -> Option<String> {
+        let msg = self.ws.read_message();
+        if msg.is_ok() {
+            let result = msg.unwrap_or_else(|_| Message::Ping(vec![]));
+            match result {
+                Message::Text(x) => Some(x),
+                _ => None,
             }
         } else {
             None
@@ -83,33 +88,14 @@ impl Actor {
         self.ws.write_message(data).unwrap_or(());
     }
 
-    pub fn ready(&self) -> bool {
-        self.ready
-    }
-
-    pub fn set_ready(&mut self) {
-        self.ready = true;
-    }
-
-    pub fn set_score(&mut self, score: i32) {
-        self.score = score;
-    }
-
-    pub fn add_score(&mut self, score: i32) {
-        self.score += score;
-    }
-
-    pub fn score(&self) -> i32 {
-        self.score
+    pub fn get_id(&mut self) -> u32 {
+        self.id
     }
 
     pub fn disconnect(&mut self, code: CloseCode) {
         let reason = Cow::Borrowed("Bye! <3");
         self.ws
-            .close(Some(CloseFrame {
-                code,
-                reason,
-            }))
+            .close(Some(CloseFrame { code, reason }))
             .unwrap_or(());
     }
 }

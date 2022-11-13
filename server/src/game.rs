@@ -1,66 +1,52 @@
 use crate::actor::Actor;
-use crate::comm::{
-    GameAction, GameRequest, GameResponse, GameResponseWithSource, GameState, Msg, MsgImpl,
-};
+use crate::comm::{Command, GameRequest, GameResponseWithSource, GameState};
 
+use std::collections::HashMap;
+use std::net::TcpStream;
 use std::sync::{RwLock, RwLockWriteGuard};
 
 use tungstenite::protocol::frame::coding::CloseCode;
-
-pub type GameHandler = fn(
-    &mut RwLockWriteGuard<Actor>,
-    &mut RwLockWriteGuard<Vec<Actor>>,
-    &[GameResponseWithSource],
-) -> bool;
+use tungstenite::WebSocket;
 
 pub struct Game {
+    last_id_given: u32,
     state: GameState,
     last_state: GameState,
-    name: String,
     host: RwLock<Actor>,
-    players: RwLock<Vec<Actor>>,
+    players: RwLock<HashMap<u32, Actor>>,
     min_players: usize,
     max_players: usize,
-    game_handler: GameHandler,
 }
 
 impl Game {
-    pub fn new(
-        name: String,
-        host: Actor,
-        min_players: usize,
-        max_players: usize,
-        game_handler: GameHandler,
-    ) -> Self {
+    pub fn new(host: Actor) -> Self {
         Self {
+            last_id_given: 0,
             last_state: GameState::Preparing,
             state: GameState::Preparing,
-            name,
             host: RwLock::new(host),
-            players: RwLock::new(Vec::new()),
-            min_players,
-            max_players,
-            game_handler,
+            players: RwLock::new(HashMap::new()),
+            min_players: 0,
+            max_players: 0,
         }
-    }
-
-    pub fn get_name(&self) -> &str {
-        self.name.as_str()
     }
 
     pub fn get_host(&mut self) -> &mut RwLock<Actor> {
         &mut self.host
     }
 
-    pub fn add(&mut self, mut player: Actor) -> bool {
+    pub fn add(&mut self, mut player_ws: WebSocket<TcpStream>) -> bool {
         let mut players = self.players.write().unwrap();
+        self.last_id_given += 1;
+        let mut player = Actor::new(self.last_id_given, player_ws);
         if players.len() < self.max_players
             && (self.state == GameState::Lobby || self.state == GameState::LobbyReady)
         {
-            players.push(player);
+            players.insert(self.last_id_given, player);
             return true;
         }
         player.disconnect(CloseCode::Error);
+
         false
     }
 
@@ -73,11 +59,11 @@ impl Game {
         let mut players = self.players.write().unwrap();
         let mut host = self.host.write().unwrap();
 
-        let host_message = host.read_response();
+        let host_message = host.read_command();
         let mut messages: Vec<GameResponseWithSource> = Vec::new();
 
         if let Some(msg) = &host_message {
-            if msg.action == GameAction::Stop {
+            if matches!(msg, Command::Stop()) {
                 self.state = GameState::Stopping;
             }
         }
@@ -86,88 +72,74 @@ impl Game {
             println!("{:?}", self.state);
         }
 
-        players.iter_mut().enumerate().for_each(|(id, player)| {
-            if let Some(result) = player.read_response() {
-                messages.push(GameResponseWithSource {
-                    msg: result,
-                    index: id,
-                    source: player.get_name().to_string(),
-                });
-            }
+        players.iter_mut().for_each(|(id, player)| {
+            /// FORWARD DATA
+            if let Some(result) = player.read_text() {}
         });
 
         match self.state {
             GameState::Preparing => {
-                host.set_ready();
-                if host.ready() {
-                    self.state = GameState::Lobby;
+                if let Some(msg) = &host_message {
+                    if matches!(
+                        msg,
+                        Command::Prepare {
+                            min_players,
+                            max_players
+                        }
+                    ) {
+                        self.state = GameState::Playing;
+                    }
                 }
-                players.iter_mut().for_each(|player| {
-                    player.set_score(0);
-                });
+
                 host.send_request(&GameRequest::default());
-                host.send_request(&GameResponse::default());
-                host.send_request(&MsgImpl::Start);
-                host.send_request(&MsgImpl::Countdown { time: 3 });
-                host.send_request(&Msg::new(MsgImpl::Idle));
+                host.send_request(&Command::State {
+                    players: vec![1, 2, 3],
+                    state: self.state.clone(),
+                });
+                host.send_request(&Command::Prepare {
+                    min_players: 2,
+                    max_players: 8,
+                });
+                host.send_request(&Command::Stop());
+                host.send_request(&Command::PrepareReply {
+                    key: "hey".to_string(),
+                });
+                host.send_request(&Command::From {
+                    from: 1,
+                    data: "".to_string(),
+                });
+                host.send_request(&Command::To {
+                    to: vec![1, 2],
+                    data: "".to_string(),
+                });
             } // Resettting the game data, & accepting
             GameState::Lobby => {
                 let enough_players =
                     players.len() >= self.min_players && players.len() <= self.max_players;
-                let everybody_ready = players.iter().all(|actor| actor.ready());
-                println!("{} & {}", enough_players, everybody_ready);
-                if enough_players && everybody_ready {
+
+                if enough_players {
                     self.state = GameState::LobbyReady;
-                }
-                for msg in messages.iter() {
-                    if msg.msg.action == GameAction::Ready {
-                        players[msg.index].set_ready();
-                    }
                 }
             } // Accepts new players
             GameState::LobbyReady => {
                 let enough_players =
                     players.len() >= self.min_players && players.len() <= self.max_players;
-                let everybody_ready = players.iter().all(|actor| actor.ready());
-                if !enough_players || !everybody_ready {
-                    self.state = GameState::Lobby;
-                }
 
-                if let Some(msg) = &host_message {
-                    if msg.action == GameAction::Start {
-                        self.state = GameState::LobbyReadyCountdown;
+                if !enough_players {
+                    self.state = GameState::Lobby;
+                } else {
+                    if let Some(msg) = &host_message {
+                        if matches!(msg, Start) {
+                            self.state = GameState::Playing;
+                        }
                     }
                 }
             } // The game can be started
-            GameState::LobbyReadyCountdown => {
-                if let Some(msg) = &host_message {
-                    if msg.action == GameAction::Countdown {
-                        self.state = GameState::Playing;
-                    }
-                }
-            } // Playing
             GameState::Playing => {
-                let finished = (self.game_handler)(&mut host, &mut players, &messages);
-                if finished {
-                    self.state = GameState::AfterGame;
-                }
+                // Leaves on stop message from host, executed before the SM
             }
-            GameState::AfterGame => {
-                if let Some(msg) = &host_message {
-                    if msg.action == GameAction::Replay {
-                        self.state = GameState::Playing;
-                    } else if msg.action == GameAction::ReplayNew {
-                        players.iter_mut().for_each(|player| {
-                            player.disconnect(CloseCode::Away);
-                        });
-                        self.state = GameState::Preparing;
-                    } else if msg.action == GameAction::Stop {
-                        self.state = GameState::Stopping;
-                    }
-                }
-            } // Shows stats & propose to replay
             GameState::Stopping => {
-                players.iter_mut().for_each(|player| {
+                players.iter_mut().for_each(|(u32, player)| {
                     player.disconnect(CloseCode::Away);
                 });
                 host.disconnect(CloseCode::Away);

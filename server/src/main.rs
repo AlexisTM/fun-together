@@ -1,8 +1,4 @@
-use std::{
-    net::TcpListener,
-    sync::{RwLock},
-    thread::spawn, time::Duration,
-};
+use std::{net::TcpListener, sync::RwLock, thread::spawn, time::Duration};
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -15,7 +11,6 @@ use tungstenite::{
 pub mod actor;
 pub mod comm;
 pub mod game;
-pub mod games;
 
 use crate::actor::Actor;
 
@@ -57,7 +52,6 @@ fn main() {
         }
         let websocket = websocket_res.unwrap();
 
-
         let available: bool = {
             let map = GAME_LIST.read().unwrap();
             map.contains_key(&(key.clone()))
@@ -68,7 +62,7 @@ fn main() {
             let map = GAME_LIST.read().unwrap();
             let rw_game = map.get(&key).unwrap();
             let mut game = rw_game.write().unwrap();
-            game.add(Actor::new(user_name, websocket));
+            game.add(websocket);
             println!("Added.");
         } else {
             {
@@ -76,7 +70,9 @@ fn main() {
                 let mut map = GAME_LIST.write().unwrap();
                 map.insert(
                     key,
-                    RwLock::new(Game::new(name, Actor::new(host_name, websocket), 2, 10, games::test::game_handler)),
+                    RwLock::new(Game::new(
+                        Actor::new(0, websocket),
+                    )),
                 );
                 println!("Created.");
             }
