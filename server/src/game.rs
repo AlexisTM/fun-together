@@ -1,19 +1,19 @@
 use crate::actor::Actor;
-use crate::comm::{GameAction, GameResponseWithSource, GameState};
+use crate::comm::{GameAction, GameResponseWithSource, GameState, GameRequest, GameResponse};
 
 use std::sync::{RwLock, RwLockWriteGuard};
 
 use tungstenite::protocol::frame::coding::CloseCode;
 
 pub type GameHandler = fn(
-    &mut GameState,
     &mut RwLockWriteGuard<Actor>,
     &mut RwLockWriteGuard<Vec<Actor>>,
     &[GameResponseWithSource],
-);
+) -> bool;
 
 pub struct Game {
     state: GameState,
+    last_state: GameState,
     name: String,
     host: RwLock<Actor>,
     players: RwLock<Vec<Actor>>,
@@ -31,6 +31,7 @@ impl Game {
         game_handler: GameHandler,
     ) -> Self {
         Self {
+            last_state: GameState::Preparing,
             state: GameState::Preparing,
             name,
             host: RwLock::new(host),
@@ -66,6 +67,7 @@ impl Game {
     }
 
     pub fn update(&mut self) -> bool {
+        let curr_state = self.state.clone();
         let mut players = self.players.write().unwrap();
         let mut host = self.host.write().unwrap();
 
@@ -77,10 +79,16 @@ impl Game {
                 self.state = GameState::Stopping;
             }
         }
-        players.iter_mut().for_each(|player| {
+
+        if self.state != self.last_state {
+            println!("{:?}", self.state);
+        }
+
+        players.iter_mut().enumerate().for_each(|(id, player)| {
             if let Some(result) = player.read_response() {
                 messages.push(GameResponseWithSource {
                     msg: result,
+                    index: id,
                     source: player.get_name().to_string(),
                 });
             }
@@ -95,13 +103,21 @@ impl Game {
                 players.iter_mut().for_each(|player| {
                     player.set_score(0);
                 });
+                host.send_request(&GameRequest::default());
+                host.send_request(&GameResponse::default());
             } // Resettting the game data, & accepting
             GameState::Lobby => {
                 let enough_players =
                     players.len() >= self.min_players && players.len() <= self.max_players;
                 let everybody_ready = players.iter().all(|actor| actor.ready());
-                if self.state == GameState::Lobby && enough_players && everybody_ready {
+                println!("{} & {}", enough_players, everybody_ready);
+                if enough_players && everybody_ready {
                     self.state = GameState::LobbyReady;
+                }
+                for msg in messages.iter() {
+                    if msg.msg.action == GameAction::Ready {
+                        players[msg.index].set_ready();
+                    }
                 }
             } // Accepts new players
             GameState::LobbyReady => {
@@ -126,7 +142,10 @@ impl Game {
                 }
             } // Playing
             GameState::Playing => {
-                (self.game_handler)(&mut self.state, &mut host, &mut players, &messages);
+                let finished = (self.game_handler)(&mut host, &mut players, &messages);
+                if finished {
+                    self.state = GameState::AfterGame;
+                }
             }
             GameState::AfterGame => {
                 if let Some(msg) = &host_message {
@@ -153,6 +172,7 @@ impl Game {
                 return false;
             } // Cleanup of the game and destruction of all sessions
         }
+        self.last_state = curr_state;
         true
     }
 }

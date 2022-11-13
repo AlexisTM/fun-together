@@ -5,6 +5,8 @@ const roomid = document.getElementById('roomid');
 const username = document.getElementById('username');
 const data = document.getElementById('data');
 
+var msgs = []
+
 function log(logdata) {
     textarea.value += logdata;
     textarea.scrollTop = textarea.scrollHeight;
@@ -27,8 +29,8 @@ function start_connection() {
         ws.onclose = (a) => { console.log(a); log("[CLOSED] Code: " + a.code + " Reason: \"" + a.reason + "\"\n"); }
         ws.onerror = (a) => { console.log(a); log("[ERROR]\n"); }
         ws.onopen = (a) => { console.log(a); log("[OPENED]\n"); }
-        ws.onconnect = (a) => { console.log(a); log("[CONNECTED] " + a + "\n"); };
-        ws.onmessage = (a) => { console.log(a); log("[MESSAGE] " + a + "\n"); };
+        ws.onconnect = (a) => { console.log(a); log("[CONNECTED]\n"); };
+        ws.onmessage = (a) => { console.log(a); log("[MESSAGE   IN] " + a.data + "\n"); msgs = a;};
     }
     else {
         log("[CONNECTING] The websocket is already connecting.\n");

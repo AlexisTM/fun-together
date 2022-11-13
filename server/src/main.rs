@@ -1,7 +1,7 @@
 use std::{
     net::TcpListener,
     sync::{RwLock},
-    thread::spawn,
+    thread::spawn, time::Duration,
 };
 
 use once_cell::sync::Lazy;
@@ -51,7 +51,12 @@ fn main() {
 
         let s = stream.unwrap();
         s.set_nonblocking(true).unwrap();
-        let websocket = accept_hdr(s, callback).unwrap();
+        let websocket_res = accept_hdr(s, callback);
+        if websocket_res.is_err() {
+            return;
+        }
+        let websocket = websocket_res.unwrap();
+
 
         let available: bool = {
             let map = GAME_LIST.read().unwrap();
@@ -78,11 +83,14 @@ fn main() {
             spawn(move || {
                 println!("Starting a new game.");
                 loop {
-                    let new_key: String = "key".to_string();
-                    let map = GAME_LIST.read().unwrap();
-                    let rw_game = map.get(&new_key).unwrap();
-                    let mut game = rw_game.write().unwrap();
-                    game.update();
+                    {
+                        let new_key: String = "key".to_string();
+                        let map = GAME_LIST.read().unwrap();
+                        let rw_game = map.get(&new_key).unwrap();
+                        let mut game = rw_game.write().unwrap();
+                        game.update();
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
                 }
             });
         }

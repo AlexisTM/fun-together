@@ -1,14 +1,18 @@
 use std::sync::RwLockWriteGuard;
 
-use crate::comm::{GameRequest, GameState, GameResponseWithSource};
+use crate::comm::{GameRequest, GameResponseWithSource, GameAction};
 use crate::actor::Actor;
 
 pub fn game_handler(
-    _state: &mut GameState,
     host: &mut RwLockWriteGuard<Actor>,
     _players: &mut RwLockWriteGuard<Vec<Actor>>,
     _messages: &[GameResponseWithSource],
-) {
-    let request = GameRequest::default();
+) -> bool {
+    let mut request = GameRequest::default();
+    request.action = GameAction::RequestText;
+    request.title = "Give me some fun".to_string();
+    request.description = "Example: I love fried chicken!".to_string();
+    request.id = 1000;
     host.send_request(&request);
+    return true;
 }
