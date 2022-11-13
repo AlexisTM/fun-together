@@ -47,7 +47,7 @@ impl Actor {
     pub fn read_response(&mut self) -> Option<GameResponse> {
         let msg = self.ws.read_message();
         let string_msg = if msg.is_ok() {
-            let result = msg.unwrap_or(Message::Text("".to_string()));
+            let result = msg.unwrap_or_else(|_| Message::Text("".to_string()));
             match result {
                 Message::Text(x) => Some(x),
                 _ => None,

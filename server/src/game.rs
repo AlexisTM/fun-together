@@ -121,7 +121,7 @@ impl Game {
                             player.disconnect(CloseCode::Away);
                         });
                         self.state = GameState::Preparing;
-                    } else if msg.action == GameAction::ReplayNew {
+                    } else if msg.action == GameAction::Stop {
                         self.state = GameState::Stopping;
                     }
                 }
