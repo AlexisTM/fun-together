@@ -5,7 +5,7 @@ use tungstenite::{
     Error, Message, WebSocket,
 };
 
-use crate::comm::{GameRequest, GameResponse};
+use crate::comm::{GameResponse};
 
 pub struct Actor {
     name: String,
@@ -40,7 +40,7 @@ impl Actor {
     }
 
     pub fn read(&mut self) -> Result<Message, Error> {
-        return self.ws.read_message();
+        self.ws.read_message()
     }
 
     // Read as text
@@ -59,8 +59,8 @@ impl Actor {
         if let Some(val) = string_msg {
             let json: Result<GameResponse, _> = serde_json::from_str(val.as_str());
             match json {
-                Ok(valid_json) => return Some(valid_json),
-                Err(_) => return None,
+                Ok(valid_json) => Some(valid_json),
+                Err(_) => None,
             }
         } else {
             None
@@ -107,8 +107,8 @@ impl Actor {
         let reason = Cow::Borrowed("Bye! <3");
         self.ws
             .close(Some(CloseFrame {
-                code: code,
-                reason: reason,
+                code,
+                reason,
             }))
             .unwrap_or(());
     }

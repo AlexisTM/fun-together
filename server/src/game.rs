@@ -1,10 +1,10 @@
 use crate::actor::Actor;
-use crate::comm::{GameAction, GameRequest, GameResponse, GameResponseWithSource, GameState};
+use crate::comm::{GameAction, GameResponseWithSource, GameState};
 
 use std::sync::RwLock;
 
 use tungstenite::protocol::frame::coding::CloseCode;
-use tungstenite::Message;
+
 
 pub struct Game {
     state: GameState,
@@ -37,14 +37,12 @@ impl Game {
 
     pub fn add(&mut self, mut player: Actor) -> bool {
         let mut players = self.players.write().unwrap();
-        if players.len() < self.max_players {
-            if self.state == GameState::Lobby || self.state == GameState::LobbyReady {
-                players.push(player);
-                return true;
-            }
+        if players.len() < self.max_players && (self.state == GameState::Lobby || self.state == GameState::LobbyReady) {
+            players.push(player);
+            return true;
         }
         player.disconnect(CloseCode::Error);
-        return false;
+        false
     }
 
     pub fn state(self) -> GameState {
@@ -86,10 +84,8 @@ impl Game {
                 let enough_players =
                     players.len() >= self.min_players && players.len() <= self.max_players;
                 let everybody_ready = players.iter().all(|actor| actor.ready());
-                if self.state == GameState::Lobby {
-                    if enough_players && everybody_ready {
-                        self.state = GameState::LobbyReady;
-                    }
+                if self.state == GameState::Lobby && enough_players && everybody_ready {
+                    self.state = GameState::LobbyReady;
                 }
             } // Accepts new players
             GameState::LobbyReady => {
@@ -141,6 +137,6 @@ impl Game {
                 return false;
             } // Cleanup of the game and destruction of all sessions
         }
-        return true;
+        true
     }
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum GameAction {
     Idle,          // Idle
     Start,         // Start the game, from host
@@ -14,7 +14,7 @@ pub enum GameAction {
     Show,          // Show an image
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum GameState {
     Preparing,           // Preparing the game, accepting
     Lobby,               // Accepts new players
