@@ -9,7 +9,7 @@ pub type GameHandler = fn(
     &mut GameState,
     &mut RwLockWriteGuard<Actor>,
     &mut RwLockWriteGuard<Vec<Actor>>,
-    &Vec<GameResponseWithSource>,
+    &[GameResponseWithSource],
 );
 
 pub struct Game {

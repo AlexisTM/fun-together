@@ -7,7 +7,7 @@ pub fn game_handler(
     _state: &mut GameState,
     host: &mut RwLockWriteGuard<Actor>,
     _players: &mut RwLockWriteGuard<Vec<Actor>>,
-    _messages: &Vec<GameResponseWithSource>,
+    _messages: &[GameResponseWithSource],
 ) {
     let request = GameRequest::default();
     host.send_request(&request);
