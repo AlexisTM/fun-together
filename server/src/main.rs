@@ -1,4 +1,8 @@
-use std::{net::TcpListener, sync::RwLock, thread::spawn};
+use std::{
+    net::TcpListener,
+    sync::{RwLock},
+    thread::spawn,
+};
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -11,8 +15,10 @@ use tungstenite::{
 pub mod actor;
 pub mod comm;
 pub mod game;
+pub mod games;
 
 use crate::actor::Actor;
+
 use crate::game::Game;
 
 static GAME_LIST: Lazy<RwLock<HashMap<String, RwLock<Game>>>> =
@@ -65,7 +71,7 @@ fn main() {
                 let mut map = GAME_LIST.write().unwrap();
                 map.insert(
                     key,
-                    RwLock::new(Game::new(name, Actor::new(host_name, websocket), 2, 10)),
+                    RwLock::new(Game::new(name, Actor::new(host_name, websocket), 2, 10, games::test::game_handler)),
                 );
                 println!("Created.");
             }

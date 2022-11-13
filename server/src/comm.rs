@@ -1,7 +1,10 @@
+use std::default::Default;
+
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub enum GameAction {
+    #[default]
     Idle,          // Idle
     Start,         // Start the game, from host
     Countdown,     // Sends a countdown request to host, host send Countdown back when done
@@ -14,8 +17,9 @@ pub enum GameAction {
     Show,          // Show an image
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub enum GameState {
+    #[default]
     Preparing,           // Preparing the game, accepting
     Lobby,               // Accepts new players
     LobbyReady,          // The game can be started
@@ -27,7 +31,7 @@ pub enum GameState {
 }
 
 // From the clients & the host
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct GameResponse {
     pub id: String,         // Same ID as the request
     pub action: GameAction, // Action that was requested
@@ -44,7 +48,7 @@ pub struct GameResponseWithSource {
 }
 
 // To the clients & the host
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct GameRequest {
     pub id: String,          // Unique identifier
     pub action: GameAction,  // The action to be done

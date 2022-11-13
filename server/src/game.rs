@@ -1,10 +1,16 @@
 use crate::actor::Actor;
 use crate::comm::{GameAction, GameResponseWithSource, GameState};
 
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockWriteGuard};
 
 use tungstenite::protocol::frame::coding::CloseCode;
 
+pub type GameHandler = fn(
+    &mut GameState,
+    &mut RwLockWriteGuard<Actor>,
+    &mut RwLockWriteGuard<Vec<Actor>>,
+    &Vec<GameResponseWithSource>,
+);
 
 pub struct Game {
     state: GameState,
@@ -13,10 +19,17 @@ pub struct Game {
     players: RwLock<Vec<Actor>>,
     min_players: usize,
     max_players: usize,
+    game_handler: GameHandler,
 }
 
 impl Game {
-    pub fn new(name: String, host: Actor, min_players: usize, max_players: usize) -> Self {
+    pub fn new(
+        name: String,
+        host: Actor,
+        min_players: usize,
+        max_players: usize,
+        game_handler: GameHandler,
+    ) -> Self {
         Self {
             state: GameState::Preparing,
             name,
@@ -24,6 +37,7 @@ impl Game {
             players: RwLock::new(Vec::new()),
             min_players,
             max_players,
+            game_handler,
         }
     }
 
@@ -37,7 +51,9 @@ impl Game {
 
     pub fn add(&mut self, mut player: Actor) -> bool {
         let mut players = self.players.write().unwrap();
-        if players.len() < self.max_players && (self.state == GameState::Lobby || self.state == GameState::LobbyReady) {
+        if players.len() < self.max_players
+            && (self.state == GameState::Lobby || self.state == GameState::LobbyReady)
+        {
             players.push(player);
             return true;
         }
@@ -110,7 +126,7 @@ impl Game {
                 }
             } // Playing
             GameState::Playing => {
-                // Logic!!
+                (self.game_handler)(&mut self.state, &mut host, &mut players, &messages);
             }
             GameState::AfterGame => {
                 if let Some(msg) = &host_message {
