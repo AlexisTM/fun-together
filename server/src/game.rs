@@ -1,5 +1,7 @@
 use crate::actor::Actor;
-use crate::comm::{GameAction, GameResponseWithSource, GameState, GameRequest, GameResponse};
+use crate::comm::{
+    FullMsg, GameAction, GameRequest, GameResponse, GameResponseWithSource, GameState, Msg,
+};
 
 use std::sync::{RwLock, RwLockWriteGuard};
 
@@ -105,6 +107,9 @@ impl Game {
                 });
                 host.send_request(&GameRequest::default());
                 host.send_request(&GameResponse::default());
+                host.send_request(&Msg::Start);
+                host.send_request(&Msg::Countdown { time: 3 });
+                host.send_request(&FullMsg::new(Msg::Idle));
             } // Resettting the game data, & accepting
             GameState::Lobby => {
                 let enough_players =

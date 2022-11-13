@@ -1,4 +1,4 @@
-use std::default::Default;
+use std::{default::Default, fmt};
 
 use serde::{Deserialize, Serialize};
 
@@ -60,4 +60,83 @@ pub struct GameRequest {
     pub width: u16,          // Width of the data (for images)
     pub data: Vec<u8>,       // Data provided with the action
     pub time_s: i32,         // Time available for the action
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Button {
+    id: String,
+    title: String,
+    descr: String,
+    text: String,
+}
+
+// Another message idea?
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Image {
+    data: Vec<u8>,
+    width: u32,
+    id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Msg {
+    /// Host
+    Idle, // To
+    Countdown {
+        // To & from, time = 0 means continue
+        time: i32,
+    },
+    Scores(String), // To
+    Start,          // From
+    Stop(String),   // From
+
+    /// User
+    ButtonReq(Button), // To
+    ButtonsReq(Vec<Button>), // To
+    ButtonResp {
+        // From
+        id: String, // Button ID
+    },
+    TextReq {
+        id: String,
+        title: String,
+        descr: String,
+        number: u8,
+    },
+    TextRes {
+        id: String,
+        text: Vec<String>,
+    },
+
+    ShowImage(Image),     // To
+    AnnotateReq(Image),   // To
+    AnnotateResp(String), // From
+    DrawRequest {
+        // To
+        id: String,
+        title: String,
+        descr: String,
+    },
+    DrawResponse(Image), // From
+}
+
+impl fmt::Display for Msg {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FullMsg {
+    cmd: String,
+    data: Msg,
+}
+
+impl FullMsg {
+    pub fn new(data: Msg) -> Self {
+        Self {
+            cmd: data.to_string(),
+            data,
+        }
+    }
 }
