@@ -2,6 +2,9 @@ use std::{default::Default, fmt};
 
 use serde::{Deserialize, Serialize};
 
+/// Version 3
+
+/// Version 1
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub enum GameAction {
     #[default]
@@ -78,8 +81,9 @@ pub struct Image {
     id: String,
 }
 
+/// Version 2
 #[derive(Serialize, Deserialize, Debug)]
-pub enum Msg {
+pub enum MsgImpl {
     /// Host
     Idle, // To
     Countdown {
@@ -120,20 +124,20 @@ pub enum Msg {
     DrawResponse(Image), // From
 }
 
-impl fmt::Display for Msg {
+impl fmt::Display for MsgImpl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct FullMsg {
+pub struct Msg {
     cmd: String,
-    data: Msg,
+    data: MsgImpl,
 }
 
-impl FullMsg {
-    pub fn new(data: Msg) -> Self {
+impl Msg {
+    pub fn new(data: MsgImpl) -> Self {
         Self {
             cmd: data.to_string(),
             data,
