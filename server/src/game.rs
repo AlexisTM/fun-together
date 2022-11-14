@@ -10,7 +10,7 @@ use tungstenite::WebSocket;
 
 pub struct Game {
     state: GameState,
-    host: RwLock<Actor>,
+    host: Actor,
     players: RwLock<HashMap<usize, Actor>>,
     min_players: usize,
     max_players: usize,
@@ -44,7 +44,7 @@ impl Game {
         Self {
             last_id_given: 0,
             state: GameState::Preparing,
-            host: RwLock::new(host),
+            host,
             players: RwLock::new(HashMap::new()),
             min_players: 0,
             max_players: 0,
@@ -70,7 +70,6 @@ impl Game {
 
     pub fn update(&mut self) -> bool {
         let mut players = self.players.write().unwrap();
-        let mut host = self.host.write().unwrap();
 
         let curr_state = self.state.clone();
 
@@ -99,7 +98,7 @@ impl Game {
                 players.iter_mut().for_each(|(_u32, player)| {
                     player.disconnect(CloseCode::Away);
                 });
-                host.disconnect(CloseCode::Away);
+                self.host.disconnect(CloseCode::Away);
             } // Cleanup of the game and destruction of all sessions
             GameState::Stopped => {
                 // Nothing to do
@@ -109,14 +108,14 @@ impl Game {
 
         players.iter_mut().for_each(|(id, player)| {
             if let Some(result) = player.read_text() {
-                host.send_request(&&Command::From {
+                self.host.send_request(&&Command::From {
                     from: *id,
                     data: result,
                 });
             }
         });
 
-        while let Some(host_cmd) = host.read_command() {
+        while let Some(host_cmd) = self.host.read_command() {
             println!("{:?}", host_cmd);
             match host_cmd {
                 Command::Prepare {
@@ -127,11 +126,11 @@ impl Game {
                         self.min_players = min_players;
                         self.max_players = max_players;
                         self.state = GameState::Lobby;
-                        host.send_request(&Command::PrepareReply {
+                        self.host.send_request(&Command::PrepareReply {
                             key: "HEYX".to_string(),
                         });
                     } else {
-                        host.send_request(&Command::Error {
+                        self.host.send_request(&Command::Error {
                             reason: "The game is not in Preparing state.".to_string(),
                         });
                     }
@@ -147,7 +146,7 @@ impl Game {
                         players: players.keys().cloned().collect(),
                         state: self.state.clone(),
                     };
-                    host.send_request(&msg);
+                    self.host.send_request(&msg);
                 }
                 Command::Stop() => {
                     self.state = GameState::Stopping;
@@ -161,12 +160,12 @@ impl Game {
                 }
 
                 Command::Error { reason: _ } => {
-                    host.send_request(&Command::Error {
+                    self.host.send_request(&Command::Error {
                         reason: "Unhandled message".to_string(),
                     });
                 }
                 Command::PrepareReply { key: _ } => {
-                    host.send_request(&Command::Error {
+                    self.host.send_request(&Command::Error {
                         reason: "Unhandled message".to_string(),
                     });
                 }
@@ -174,12 +173,12 @@ impl Game {
                     players: _,
                     state: _,
                 } => {
-                    host.send_request(&Command::Error {
+                    self.host.send_request(&Command::Error {
                         reason: "Unhandled message".to_string(),
                     });
                 }
                 Command::From { from: _, data: _ } => {
-                    host.send_request(&Command::Error {
+                    self.host.send_request(&Command::Error {
                         reason: "Unhandled message".to_string(),
                     });
                 }
@@ -191,7 +190,7 @@ impl Game {
                 players: players.keys().cloned().collect(),
                 state: self.state.clone(),
             };
-            host.send_request(&msg);
+            self.host.send_request(&msg);
             println!("{:?}", self.state);
         }
         true
