@@ -1,9 +1,10 @@
 use crate::actor::Actor;
 use crate::comm::{Command, GameRequest, GameState};
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::net::TcpStream;
-use std::sync::RwLock;
+use parking_lot::{ReentrantMutex};
 
 use tungstenite::protocol::frame::coding::CloseCode;
 use tungstenite::WebSocket;
@@ -11,7 +12,7 @@ use tungstenite::WebSocket;
 pub struct Game {
     state: GameState,
     host: Actor,
-    players: RwLock<HashMap<usize, Actor>>,
+    players: ReentrantMutex<RefCell<HashMap<usize, Actor>>>,
     min_players: usize,
     max_players: usize,
     last_id_given: usize,
@@ -45,14 +46,15 @@ impl Game {
             last_id_given: 0,
             state: GameState::Preparing,
             host,
-            players: RwLock::new(HashMap::new()),
+            players: ReentrantMutex::new(RefCell::new(HashMap::new())),
             min_players: 0,
             max_players: 0,
         }
     }
 
     pub fn add(&mut self, player_ws: WebSocket<TcpStream>) -> bool {
-        let mut players = self.players.write().unwrap();
+        let players_binding = self.players.lock();
+        let mut players = players_binding.borrow_mut();
 
         self.last_id_given += 1;
         let mut player = Actor::new(self.last_id_given, player_ws);
@@ -69,7 +71,8 @@ impl Game {
     }
 
     pub fn update(&mut self) -> bool {
-        let mut players = self.players.write().unwrap();
+        let players_binding = self.players.lock();
+        let mut players = players_binding.borrow_mut();
 
         let curr_state = self.state.clone();
 

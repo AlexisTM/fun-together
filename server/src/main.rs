@@ -1,4 +1,6 @@
-use std::{net::TcpListener, sync::RwLock, thread::spawn, time::Duration};
+use std::{net::TcpListener, thread::spawn, time::Duration};
+
+use parking_lot::RwLock;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -53,21 +55,21 @@ fn main() {
         let websocket = websocket_res.unwrap();
 
         let available: bool = {
-            let map = GAME_LIST.read().unwrap();
+            let map = GAME_LIST.read();
             map.contains_key(&(key.clone()))
         };
         if available {
             println!("Adding a new user.");
             // STUCK;
-            let map = GAME_LIST.read().unwrap();
-            let rw_game = map.get(&key).unwrap();
-            let mut game = rw_game.write().unwrap();
-            game.add(websocket);
+            let map = GAME_LIST.read();
+            let rw_game = map.get(&key);
+            let game = rw_game.unwrap();
+            game.write().add(websocket);
             println!("Added.");
         } else {
             {
                 println!("Creating the game.");
-                let mut map = GAME_LIST.write().unwrap();
+                let mut map = GAME_LIST.write();
                 map.insert(
                     key,
                     RwLock::new(Game::new(
@@ -81,9 +83,9 @@ fn main() {
                 loop {
                     {
                         let new_key: String = "key".to_string();
-                        let map = GAME_LIST.read().unwrap();
+                        let map = GAME_LIST.read();
                         let rw_game = map.get(&new_key).unwrap();
-                        let mut game = rw_game.write().unwrap();
+                        let mut game = rw_game.write();
                         game.update();
                     }
                     std::thread::sleep(Duration::from_millis(100));
