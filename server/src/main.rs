@@ -60,7 +60,6 @@ fn main() {
         };
         if available {
             println!("Adding a new user.");
-            // STUCK;
             let map = GAME_LIST.read();
             let rw_game = map.get(&key);
             let game = rw_game.unwrap();
@@ -70,12 +69,7 @@ fn main() {
             {
                 println!("Creating the game.");
                 let mut map = GAME_LIST.write();
-                map.insert(
-                    key,
-                    RwLock::new(Game::new(
-                        Actor::new(0, websocket),
-                    )),
-                );
+                map.insert(key, RwLock::new(Game::new(Actor::new(0, websocket))));
                 println!("Created.");
             }
             spawn(move || {
