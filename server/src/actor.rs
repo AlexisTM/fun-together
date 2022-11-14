@@ -5,7 +5,7 @@ use tungstenite::{
     Error, Message, WebSocket,
 };
 
-use crate::comm::{GameResponse, Command};
+use crate::comm::{Command};
 
 pub struct Actor {
     id: u32,

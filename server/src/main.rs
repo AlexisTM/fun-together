@@ -40,9 +40,9 @@ fn main() {
         };
 
         let key: String = "key".to_string();
-        let name: String = "ID_OF_GAME".to_string();
-        let host_name: String = "host".to_string();
-        let user_name: String = "user".to_string();
+        let _name: String = "ID_OF_GAME".to_string();
+        let _host_name: String = "host".to_string();
+        let _user_name: String = "user".to_string();
 
         let s = stream.unwrap();
         s.set_nonblocking(true).unwrap();

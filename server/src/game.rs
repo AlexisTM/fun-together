@@ -3,7 +3,7 @@ use crate::comm::{Command, GameRequest, GameResponseWithSource, GameState};
 
 use std::collections::HashMap;
 use std::net::TcpStream;
-use std::sync::{RwLock, RwLockWriteGuard};
+use std::sync::{RwLock};
 
 use tungstenite::protocol::frame::coding::CloseCode;
 use tungstenite::WebSocket;
@@ -35,7 +35,7 @@ impl Game {
         &mut self.host
     }
 
-    pub fn add(&mut self, mut player_ws: WebSocket<TcpStream>) -> bool {
+    pub fn add(&mut self, player_ws: WebSocket<TcpStream>) -> bool {
         let mut players = self.players.write().unwrap();
         self.last_id_given += 1;
         let mut player = Actor::new(self.last_id_given, player_ws);
@@ -60,7 +60,7 @@ impl Game {
         let mut host = self.host.write().unwrap();
 
         let host_message = host.read_command();
-        let mut messages: Vec<GameResponseWithSource> = Vec::new();
+        let _messages: Vec<GameResponseWithSource> = Vec::new();
 
         if let Some(msg) = &host_message {
             if matches!(msg, Command::Stop()) {
@@ -73,8 +73,12 @@ impl Game {
         }
 
         players.iter_mut().for_each(|(id, player)| {
-            /// FORWARD DATA
-            if let Some(result) = player.read_text() {}
+            if let Some(result) = player.read_text() {
+                host.send_request(&&Command::From {
+                    from: *id,
+                    data: result,
+                });
+            }
         });
 
         match self.state {
@@ -83,8 +87,8 @@ impl Game {
                     if matches!(
                         msg,
                         Command::Prepare {
-                            min_players,
-                            max_players
+                            min_players: _,
+                            max_players: _
                         }
                     ) {
                         self.state = GameState::Playing;
@@ -127,11 +131,9 @@ impl Game {
 
                 if !enough_players {
                     self.state = GameState::Lobby;
-                } else {
-                    if let Some(msg) = &host_message {
-                        if matches!(msg, Start) {
-                            self.state = GameState::Playing;
-                        }
+                } else if let Some(msg) = &host_message {
+                    if matches!(msg, Command::Start()) {
+                        self.state = GameState::Playing;
                     }
                 }
             } // The game can be started
@@ -139,7 +141,7 @@ impl Game {
                 // Leaves on stop message from host, executed before the SM
             }
             GameState::Stopping => {
-                players.iter_mut().for_each(|(u32, player)| {
+                players.iter_mut().for_each(|(_u32, player)| {
                     player.disconnect(CloseCode::Away);
                 });
                 host.disconnect(CloseCode::Away);

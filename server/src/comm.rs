@@ -15,7 +15,7 @@ pub enum GameState {
 
 /// Version 3
 /// The game has full control of the comms
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum Command {
     Prepare {
         min_players: u32,
@@ -33,11 +33,12 @@ pub enum Command {
         player: u32,
     },
     Stop(),
-    // Playing data:
+    // Data from the user forwarded to the game
     From {
         from: u32,
         data: String,
     },
+    // Data from the game, forwarded to the user
     To {
         to: Vec<u32>,
         data: String,
