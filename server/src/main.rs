@@ -74,13 +74,20 @@ fn main() {
             }
             spawn(move || {
                 println!("Starting a new game.");
+                let new_key: String = "key".to_string();
                 loop {
-                    {
-                        let new_key: String = "key".to_string();
+                    let ongoing = {
                         let map = GAME_LIST.read();
                         let rw_game = map.get(&new_key).unwrap();
                         let mut game = rw_game.write();
-                        game.update();
+                        game.update()
+                    };
+                    if !ongoing {
+                        let new_key: String = "key".to_string();
+                        let mut map = GAME_LIST.write();
+                        map.remove(&new_key).unwrap();
+                        println!("Game finished.");
+                        break;
                     }
                     std::thread::sleep(Duration::from_millis(100));
                 }
