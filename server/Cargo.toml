@@ -17,4 +17,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # RwLock & reentrant mutex
-parking_lot = "0.12"
+parking_lot = {version = "0.12"}

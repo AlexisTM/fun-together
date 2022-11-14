@@ -26,18 +26,9 @@ fn main() {
     let server = TcpListener::bind("127.0.0.1:8081").unwrap();
     for stream in server.incoming() {
         let callback = |req: &Request, mut response: Response| {
-            println!("Received a new ws handshake");
-            println!("The request's path is: {}", req.uri().path());
-            println!("The request's headers are:");
-            for (ref header, _value) in req.headers() {
-                println!("* {}", header);
-            }
-
+            // println!("Received a new ws handshake");
+            // println!("The request's path is: {}", req.uri().path());
             // Let's add an additional header to our response to the client.
-            let headers = response.headers_mut();
-            headers.append("MyCustomHeader", ":)".parse().unwrap());
-            headers.append("SOME_TUNGSTENITE_HEADER", "header_value".parse().unwrap());
-
             Ok(response)
         };
 
@@ -63,8 +54,12 @@ fn main() {
             let map = GAME_LIST.read();
             let rw_game = map.get(&key);
             let game = rw_game.unwrap();
-            game.write().add(websocket);
-            println!("Added.");
+            let added: bool = game.write().add(websocket);
+            if added {
+                println!("Added.");
+            } else {
+                println!("Rejected.");
+            }
         } else {
             {
                 println!("Creating the game.");
@@ -73,7 +68,7 @@ fn main() {
                 println!("Created.");
             }
             spawn(move || {
-                println!("Starting a new game.");
+                println!("Running the game.");
                 let new_key: String = "key".to_string();
                 loop {
                     let ongoing = {
