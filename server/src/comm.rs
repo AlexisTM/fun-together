@@ -18,30 +18,33 @@ pub enum GameState {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum Command {
     Prepare {
-        min_players: u32,
-        max_players: u32,
+        min_players: usize,
+        max_players: usize,
     }, // Prepares a game
     PrepareReply {
         key: String, // The game key
     },
     Start(), // Prevent players to join from this point on
     State {
-        players: Vec<u32>,
+        players: Vec<usize>,
         state: GameState,
     },
     Kick {
-        player: u32,
+        player: usize,
     },
     Stop(),
     // Data from the user forwarded to the game
     From {
-        from: u32,
+        from: usize,
         data: String,
     },
     // Data from the game, forwarded to the user
     To {
-        to: Vec<u32>,
+        to: Vec<usize>,
         data: String,
+    },
+    Error {
+        reason: String,
     },
 }
 

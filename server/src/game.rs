@@ -1,21 +1,21 @@
 use crate::actor::Actor;
-use crate::comm::{Command, GameRequest, GameResponseWithSource, GameState};
+use crate::comm::{Command, GameRequest, GameState};
 
 use std::collections::HashMap;
 use std::net::TcpStream;
-use std::sync::{RwLock};
+use std::sync::RwLock;
 
 use tungstenite::protocol::frame::coding::CloseCode;
 use tungstenite::WebSocket;
 
 pub struct Game {
-    last_id_given: u32,
     state: GameState,
     last_state: GameState,
     host: RwLock<Actor>,
-    players: RwLock<HashMap<u32, Actor>>,
+    players: RwLock<HashMap<usize, Actor>>,
     min_players: usize,
     max_players: usize,
+    last_id_given: usize,
 }
 
 impl Game {
@@ -60,8 +60,6 @@ impl Game {
         let mut host = self.host.write().unwrap();
 
         let host_message = host.read_command();
-        let _messages: Vec<GameResponseWithSource> = Vec::new();
-
         if let Some(msg) = &host_message {
             if matches!(msg, Command::Stop()) {
                 self.state = GameState::Stopping;
@@ -80,6 +78,64 @@ impl Game {
                 });
             }
         });
+
+        while let Some(host_cmd) = host.read_command() {
+            match host_cmd {
+                Command::Prepare {
+                    min_players,
+                    max_players,
+                } => {
+                    if self.state == GameState::Preparing {
+                        self.min_players = min_players;
+                        self.max_players = max_players;
+                        self.state = GameState::Lobby;
+                    } else {
+                        host.send_request(&Command::Error {
+                            reason: "The game is not in Preparing state.".to_string(),
+                        });
+                    }
+                }
+                Command::Start() => {
+                    if self.state == GameState::LobbyReady {
+                        self.state = GameState::Playing;
+                    }
+                }
+                Command::Kick { player } => {
+                    players.remove_entry(&player);
+                }
+                Command::Stop() => {
+                    self.state = GameState::Stopping;
+                }
+                Command::To { to, data } => {
+                    for destination in to.iter() {
+                        if let Some(player) = players.get_mut(destination) {
+                            player.send_request(&data);
+                        }
+                    }
+                }
+
+                Command::Error { reason: _ } => {
+                    host.send_request(&Command::Error {
+                        reason: "Unhandled message".to_string(),
+                    });
+                }
+                Command::PrepareReply { key: _ } => {
+                    host.send_request(&Command::Error {
+                        reason: "Unhandled message".to_string(),
+                    });
+                }
+                Command::State { players: _, state: _ } => {
+                    host.send_request(&Command::Error {
+                        reason: "Unhandled message".to_string(),
+                    });
+                }
+                Command::From { from: _, data: _ } => {
+                    host.send_request(&Command::Error {
+                        reason: "Unhandled message".to_string(),
+                    });
+                }
+            }
+        }
 
         match self.state {
             GameState::Preparing => {

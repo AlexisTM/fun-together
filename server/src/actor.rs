@@ -8,7 +8,7 @@ use tungstenite::{
 use crate::comm::{Command};
 
 pub struct Actor {
-    id: u32,
+    id: usize,
     ws: WebSocket<TcpStream>,
 }
 
@@ -24,7 +24,7 @@ pub fn debug_msg(msg: Message) {
 }
 
 impl Actor {
-    pub fn new(id: u32, ws: WebSocket<TcpStream>) -> Self {
+    pub fn new(id: usize, ws: WebSocket<TcpStream>) -> Self {
         Self {
             id,
             ws,
@@ -88,7 +88,7 @@ impl Actor {
         self.ws.write_message(data).unwrap_or(());
     }
 
-    pub fn get_id(&mut self) -> u32 {
+    pub fn get_id(&mut self) -> usize {
         self.id
     }
 
