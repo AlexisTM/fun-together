@@ -3,14 +3,13 @@ use crate::comm::{Command, GameRequest, GameState};
 
 use std::collections::HashMap;
 use std::net::TcpStream;
-use std::sync::RwLock;
+use std::sync::{RwLock};
 
 use tungstenite::protocol::frame::coding::CloseCode;
 use tungstenite::WebSocket;
 
 pub struct Game {
     state: GameState,
-    last_state: GameState,
     host: RwLock<Actor>,
     players: RwLock<HashMap<usize, Actor>>,
     min_players: usize,
@@ -22,7 +21,6 @@ impl Game {
     pub fn new(host: Actor) -> Self {
         Self {
             last_id_given: 0,
-            last_state: GameState::Preparing,
             state: GameState::Preparing,
             host: RwLock::new(host),
             players: RwLock::new(HashMap::new()),
@@ -47,110 +45,27 @@ impl Game {
         }
         player.disconnect(CloseCode::Error);
 
+        let mut host = self.host.write().unwrap();
+        host.send_request(&self.game_state_command());
         false
     }
 
-    pub fn state(self) -> GameState {
-        self.state
+    fn game_state_command(&self) -> Command {
+        let players = self.players.read().unwrap();
+        return Command::State {
+            players: players.keys().cloned().collect(),
+            state: self.state.clone(),
+        };
     }
 
     pub fn update(&mut self) -> bool {
-        let curr_state = self.state.clone();
         let mut players = self.players.write().unwrap();
         let mut host = self.host.write().unwrap();
 
-        let host_message = host.read_command();
-        if let Some(msg) = &host_message {
-            if matches!(msg, Command::Stop()) {
-                self.state = GameState::Stopping;
-            }
-        }
-
-        if self.state != self.last_state {
-            println!("{:?}", self.state);
-        }
-
-        players.iter_mut().for_each(|(id, player)| {
-            if let Some(result) = player.read_text() {
-                host.send_request(&&Command::From {
-                    from: *id,
-                    data: result,
-                });
-            }
-        });
-
-        while let Some(host_cmd) = host.read_command() {
-            match host_cmd {
-                Command::Prepare {
-                    min_players,
-                    max_players,
-                } => {
-                    if self.state == GameState::Preparing {
-                        self.min_players = min_players;
-                        self.max_players = max_players;
-                        self.state = GameState::Lobby;
-                    } else {
-                        host.send_request(&Command::Error {
-                            reason: "The game is not in Preparing state.".to_string(),
-                        });
-                    }
-                }
-                Command::Start() => {
-                    if self.state == GameState::LobbyReady {
-                        self.state = GameState::Playing;
-                    }
-                }
-                Command::Kick { player } => {
-                    players.remove_entry(&player);
-                }
-                Command::Stop() => {
-                    self.state = GameState::Stopping;
-                }
-                Command::To { to, data } => {
-                    for destination in to.iter() {
-                        if let Some(player) = players.get_mut(destination) {
-                            player.send_request(&data);
-                        }
-                    }
-                }
-
-                Command::Error { reason: _ } => {
-                    host.send_request(&Command::Error {
-                        reason: "Unhandled message".to_string(),
-                    });
-                }
-                Command::PrepareReply { key: _ } => {
-                    host.send_request(&Command::Error {
-                        reason: "Unhandled message".to_string(),
-                    });
-                }
-                Command::State { players: _, state: _ } => {
-                    host.send_request(&Command::Error {
-                        reason: "Unhandled message".to_string(),
-                    });
-                }
-                Command::From { from: _, data: _ } => {
-                    host.send_request(&Command::Error {
-                        reason: "Unhandled message".to_string(),
-                    });
-                }
-            }
-        }
+        let curr_state = self.state.clone();
 
         match self.state {
             GameState::Preparing => {
-                if let Some(msg) = &host_message {
-                    if matches!(
-                        msg,
-                        Command::Prepare {
-                            min_players: _,
-                            max_players: _
-                        }
-                    ) {
-                        self.state = GameState::Playing;
-                    }
-                }
-
                 host.send_request(&GameRequest::default());
                 host.send_request(&Command::State {
                     players: vec![1, 2, 3],
@@ -187,10 +102,6 @@ impl Game {
 
                 if !enough_players {
                     self.state = GameState::Lobby;
-                } else if let Some(msg) = &host_message {
-                    if matches!(msg, Command::Start()) {
-                        self.state = GameState::Playing;
-                    }
                 }
             } // The game can be started
             GameState::Playing => {
@@ -207,7 +118,86 @@ impl Game {
                 return false;
             } // Cleanup of the game and destruction of all sessions
         }
-        self.last_state = curr_state;
+
+        players.iter_mut().for_each(|(id, player)| {
+            if let Some(result) = player.read_text() {
+                host.send_request(&&Command::From {
+                    from: *id,
+                    data: result,
+                });
+            }
+        });
+
+        while let Some(host_cmd) = host.read_command() {
+            match host_cmd {
+                Command::Prepare {
+                    min_players,
+                    max_players,
+                } => {
+                    if self.state == GameState::Preparing {
+                        self.min_players = min_players;
+                        self.max_players = max_players;
+                        self.state = GameState::Lobby;
+                        host.send_request(&Command::PrepareReply {
+                            key: "HEYX".to_string(),
+                        });
+                    } else {
+                        host.send_request(&Command::Error {
+                            reason: "The game is not in Preparing state.".to_string(),
+                        });
+                    }
+                }
+                Command::Start() => {
+                    if self.state == GameState::LobbyReady {
+                        self.state = GameState::Playing;
+                    }
+                }
+                Command::Kick { player } => {
+                    players.remove_entry(&player);
+                    let mut host = self.host.write().unwrap();
+                    host.send_request(&self.game_state_command());
+                }
+                Command::Stop() => {
+                    self.state = GameState::Stopping;
+                }
+                Command::To { to, data } => {
+                    for destination in to.iter() {
+                        if let Some(player) = players.get_mut(destination) {
+                            player.send_request(&data);
+                        }
+                    }
+                }
+
+                Command::Error { reason: _ } => {
+                    host.send_request(&Command::Error {
+                        reason: "Unhandled message".to_string(),
+                    });
+                }
+                Command::PrepareReply { key: _ } => {
+                    host.send_request(&Command::Error {
+                        reason: "Unhandled message".to_string(),
+                    });
+                }
+                Command::State {
+                    players: _,
+                    state: _,
+                } => {
+                    host.send_request(&Command::Error {
+                        reason: "Unhandled message".to_string(),
+                    });
+                }
+                Command::From { from: _, data: _ } => {
+                    host.send_request(&Command::Error {
+                        reason: "Unhandled message".to_string(),
+                    });
+                }
+            }
+        }
+
+        if curr_state != self.state {
+            host.send_request(&self.game_state_command());
+            println!("{:?}", self.state);
+        }
         true
     }
 }
