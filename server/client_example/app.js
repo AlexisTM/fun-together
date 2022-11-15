@@ -12,7 +12,15 @@ function log(logdata) {
     textarea.scrollTop = textarea.scrollHeight;
 }
 
-function start_connection() {
+function connect_game() {
+    start_connection("CONNECT");
+}
+
+function create_game() {
+    start_connection("CREATE");
+}
+
+function start_connection(type) {
     // location.href
     if (ws != undefined && (ws.readyState == 2 || ws.readyState == 3)) {
         ws.onclose = undefined;
@@ -25,7 +33,7 @@ function start_connection() {
     }
     if (ws == undefined) {
         log("[CONNECTING] to " + roomid.value + " as " + username.value + " \n");
-        ws = new WebSocket("ws://127.0.0.1:8081", []);
+        ws = new WebSocket("ws://127.0.0.1:8081/" + type + "/" + roomid.value);
         ws.onclose = (a) => { console.log(a); log("[CLOSED] Code: " + a.code + " Reason: \"" + a.reason + "\"\n"); }
         ws.onerror = (a) => { console.log(a); log("[ERROR]\n"); }
         ws.onopen = (a) => { console.log(a); log("[OPENED]\n"); }

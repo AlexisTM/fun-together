@@ -1,25 +1,37 @@
 use crate::actor::Actor;
 use crate::comm::{Command, GameRequest, GameState};
 
-
+use futures_util::stream::{FuturesUnordered, SplitSink, SplitStream};
+use parking_lot::RwLock;
+use tokio::net::tcp::{WriteHalf, ReadHalf};
 use std::collections::HashMap;
-use std::net::TcpStream;
-use parking_lot::{RwLock};
 
-use tungstenite::protocol::frame::coding::CloseCode;
-use tungstenite::WebSocket;
+use tokio::net::TcpStream;
 
-pub struct Game {
+use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+use tokio_tungstenite::WebSocketStream;
+
+pub struct Game<'a> {
     state: GameState,
-    host: Actor,
-    players: RwLock<HashMap<usize, Actor>>,
+    players: RwLock<HashMap<usize, Actor<'a>>>,
     min_players: usize,
     max_players: usize,
     last_id_given: usize,
+    futures_rx: FuturesUnordered<SplitSink<WebSocketStream<TcpStream>, Message>>,
+    futures_tx: FuturesUnordered<SplitStream<WebSocketStream<TcpStream>>>,
+    // host: WebSocketStream<TcpStream>,
+    host_rx: ReadHalf<'a>,
+    host_tx: WriteHalf<'a>,
 }
 
-impl Game {
-    pub fn new(mut host: Actor) -> Self {
+
+
+
+impl Game<'_> {
+    pub fn new(mut host: WebSocketStream<TcpStream>) -> Self {
+
+        /*
         host.send_request(&GameRequest::default());
         host.send_request(&Command::State {
             players: vec![1, 2, 3],
@@ -41,18 +53,24 @@ impl Game {
             to: vec![1, 2],
             data: "".to_string(),
         });
+        */
 
+        let (host_rx, host_tx) = host.get_mut().split();
         Self {
             last_id_given: 0,
             state: GameState::Preparing,
-            host,
+            // host,
+            host_tx,
+            host_rx,
+            futures_rx: FuturesUnordered::new(),
+            futures_tx: FuturesUnordered::new(),
             players: RwLock::new(HashMap::new()),
             min_players: 0,
             max_players: 0,
         }
     }
 
-    pub fn add(&mut self, player_ws: WebSocket<TcpStream>) -> bool {
+    pub fn add(&mut self, player_ws: WebSocketStream<TcpStream>) -> bool {
         let mut players = self.players.write();
 
         self.last_id_given += 1;
@@ -63,13 +81,13 @@ impl Game {
             players.insert(self.last_id_given, player);
             return true;
         }
-        player.disconnect(CloseCode::Error);
+        // player.disconnect(CloseCode::Error);
 
         let msg = Command::State {
             players: players.keys().cloned().collect(),
             state: self.state.clone(),
         };
-        self.host.send_request(&msg);
+        // self.host.send_request(&msg);
         false
     }
 
@@ -103,7 +121,7 @@ impl Game {
                 players.iter_mut().for_each(|(_u32, player)| {
                     player.disconnect(CloseCode::Away);
                 });
-                self.host.disconnect(CloseCode::Away);
+                // self.host.disconnect(CloseCode::Away);
             } // Cleanup of the game and destruction of all sessions
             GameState::Stopped => {
                 // Nothing to do
@@ -113,14 +131,16 @@ impl Game {
 
         players.iter_mut().for_each(|(id, player)| {
             if let Some(result) = player.read_text() {
-                self.host.send_request(&&Command::From {
-                    from: *id,
-                    data: result,
-                });
+                // self.host.send_request(&&Command::From {
+                //    from: *id,
+                //    data: result,
+                //});
             }
         });
 
-        while let Some(host_cmd) = self.host.read_command() {
+
+
+        while let Some(host_cmd) = None { //self.host.read_command() {
             println!("{:?}", host_cmd);
             match host_cmd {
                 Command::Prepare {
@@ -131,13 +151,13 @@ impl Game {
                         self.min_players = min_players;
                         self.max_players = max_players;
                         self.state = GameState::Lobby;
-                        self.host.send_request(&Command::PrepareReply {
-                            key: "HEYX".to_string(),
-                        });
+                        // self.host.send_request(&Command::PrepareReply {
+                        //     key: "HEYX".to_string(),
+                        // });
                     } else {
-                        self.host.send_request(&Command::Error {
-                            reason: "The game is not in Preparing state.".to_string(),
-                        });
+                        // self.host.send_request(&Command::Error {
+                        //     reason: "The game is not in Preparing state.".to_string(),
+                        // });
                     }
                 }
                 Command::Start() => {
@@ -151,7 +171,7 @@ impl Game {
                         players: players.keys().cloned().collect(),
                         state: self.state.clone(),
                     };
-                    self.host.send_request(&msg);
+                    // self.host.send_request(&msg);
                 }
                 Command::Stop() => {
                     self.state = GameState::Stopping;
@@ -165,27 +185,27 @@ impl Game {
                 }
 
                 Command::Error { reason: _ } => {
-                    self.host.send_request(&Command::Error {
-                        reason: "Unhandled message".to_string(),
-                    });
+                    // self.host.send_request(&Command::Error {
+                    //     reason: "Unhandled message".to_string(),
+                    // });
                 }
                 Command::PrepareReply { key: _ } => {
-                    self.host.send_request(&Command::Error {
-                        reason: "Unhandled message".to_string(),
-                    });
+                    // self.host.send_request(&Command::Error {
+                    //     reason: "Unhandled message".to_string(),
+                    // });
                 }
                 Command::State {
                     players: _,
                     state: _,
                 } => {
-                    self.host.send_request(&Command::Error {
-                        reason: "Unhandled message".to_string(),
-                    });
+                    // self.host.send_request(&Command::Error {
+                    //     reason: "Unhandled message".to_string(),
+                    // });
                 }
                 Command::From { from: _, data: _ } => {
-                    self.host.send_request(&Command::Error {
-                        reason: "Unhandled message".to_string(),
-                    });
+                    // self.host.send_request(&Command::Error {
+                    //     reason: "Unhandled message".to_string(),
+                    // });
                 }
             }
         }
@@ -195,7 +215,7 @@ impl Game {
                 players: players.keys().cloned().collect(),
                 state: self.state.clone(),
             };
-            self.host.send_request(&msg);
+            // self.host.send_request(&msg);
             println!("{:?}", self.state);
         }
         true

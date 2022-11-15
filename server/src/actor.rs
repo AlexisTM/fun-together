@@ -1,15 +1,24 @@
+use futures_util::{StreamExt, stream::{SplitStream, SplitSink}, TryStreamExt};
+use futures_util::{future};
 use serde::Serialize;
-use std::{borrow::Cow, net::TcpStream};
-use tungstenite::{
-    protocol::{frame::coding::CloseCode, CloseFrame},
-    Error, Message, WebSocket,
+use std::borrow::Cow;
+
+use tokio::{
+    net::{TcpStream, tcp::{WriteHalf, ReadHalf}}, io::{AsyncReadExt, AsyncWriteExt}
+};
+use tokio_tungstenite::{
+    tungstenite::protocol::{frame::coding::CloseCode, CloseFrame},
+    tungstenite::{Error, Message},
+    WebSocketStream,
 };
 
-use crate::comm::{Command};
+use crate::comm::Command;
 
-pub struct Actor {
+pub struct Actor<'a> {
     id: usize,
-    ws: WebSocket<TcpStream>,
+   // ws: WebSocketStream<TcpStream>,
+    ws_tx: WriteHalf<'a>,
+    ws_rx: ReadHalf<'a>,
 }
 
 pub fn debug_msg(msg: Message) {
@@ -23,21 +32,26 @@ pub fn debug_msg(msg: Message) {
     }
 }
 
-impl Actor {
-    pub fn new(id: usize, ws: WebSocket<TcpStream>) -> Self {
+impl Actor<'_> {
+    pub fn new(id: usize, ws: WebSocketStream<TcpStream>) -> Self {
+        let (rx, tx) = ws.get_mut().split();
         Self {
             id,
-            ws,
+            // ws,
+            ws_tx: tx,
+            ws_rx: rx,
         }
     }
 
     pub fn read(&mut self) -> Result<Message, Error> {
-        self.ws.read_message()
+        // self.ws_rx.filter(|msg| future::ready(msg.is_text() || msg.is_binary()))
+        return Err(Error::AlreadyClosed);
     }
 
     // Read as text
     pub fn read_command(&mut self) -> Option<Command> {
-        let msg = self.ws.read_message();
+        /*
+        let msg = self.ws.next().await.unwrap();
         let string_msg = if msg.is_ok() {
             let result = msg.unwrap_or_else(|_| Message::Ping(vec![]));
             match result {
@@ -57,9 +71,12 @@ impl Actor {
         } else {
             None
         }
+        */
+        None
     }
 
     pub fn read_text(&mut self) -> Option<String> {
+        /*
         let msg = self.ws.read_message();
         if msg.is_ok() {
             let result = msg.unwrap_or_else(|_| Message::Ping(vec![]));
@@ -69,23 +86,25 @@ impl Actor {
             }
         } else {
             None
-        }
+        }*/
+        None
     }
 
     pub fn send_request<T: Serialize>(&mut self, data: &T) {
+        /*
         if let Ok(msg) = serde_json::to_string(data) {
-            self.ws.write_message(Message::Text(msg)).unwrap_or(());
+            self.ws.send(Message::Text(msg)).await.unwrap();
         } else {
-            // Error serilizing
-        }
+            // Error serializing
+        }*/
     }
 
     pub fn write(&mut self, data: String) {
-        self.ws.write_message(Message::Text(data)).unwrap_or(());
+        // self.ws.write_message(Message::Text(data)).unwrap_or(());
     }
 
     pub fn write_message(&mut self, data: Message) {
-        self.ws.write_message(data).unwrap_or(());
+        // self.ws.write_message(data).unwrap_or(());
     }
 
     pub fn get_id(&mut self) -> usize {
@@ -93,9 +112,11 @@ impl Actor {
     }
 
     pub fn disconnect(&mut self, code: CloseCode) {
+        /*
         let reason = Cow::Borrowed("Bye! <3");
         self.ws
             .close(Some(CloseFrame { code, reason }))
             .unwrap_or(());
+        */
     }
 }
