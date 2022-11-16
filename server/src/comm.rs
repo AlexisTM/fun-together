@@ -24,23 +24,23 @@ pub enum GameState {
 #[derive(Debug)]
 pub struct PlayerSink {
     pub id: u32,
-    pub sender: SplitSink<WebSocketStream<TcpStream>, Message>,
+    pub sink: SplitSink<WebSocketStream<TcpStream>, Message>,
 }
 impl PlayerSink {
-    pub fn new(id: u32, sender: SplitSink<WebSocketStream<TcpStream>, Message>) -> Self {
-        Self { id, sender }
+    pub fn new(id: u32, sink: SplitSink<WebSocketStream<TcpStream>, Message>) -> Self {
+        Self { id, sink }
     }
 }
 
 #[derive(Debug)]
 pub struct PlayerStream {
     pub id: u32,
-    pub receiver: SplitStream<WebSocketStream<TcpStream>>,
+    pub stream: SplitStream<WebSocketStream<TcpStream>>,
 }
 
 impl PlayerStream {
-    pub fn new(id: u32, receiver: SplitStream<WebSocketStream<TcpStream>>) -> Self {
-        Self { id, receiver }
+    pub fn new(id: u32, stream: SplitStream<WebSocketStream<TcpStream>>) -> Self {
+        Self { id, stream }
     }
 }
 

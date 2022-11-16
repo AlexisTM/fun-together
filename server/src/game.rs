@@ -1,13 +1,13 @@
 use futures::{select, FutureExt};
-
 use futures_util::{SinkExt, StreamExt};
 
+use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
-use tokio_tungstenite::tungstenite::Error;
-use tokio_tungstenite::tungstenite::{Message, Result};
+use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+use tokio_tungstenite::tungstenite::{protocol::CloseFrame, Error, Message, Result};
 use tokio_tungstenite::WebSocketStream;
 
 use std::collections::HashMap;
@@ -57,18 +57,17 @@ pub async fn game_handler(
 
     loop {
         select! {
-            _event = rx.recv().fuse() => {
-                if let Some(event) = _event {
+            event = rx.recv().fuse() => {
+                if let Some(event) = event {
                     // host.send(event).await;
                     match event {
                         HostComm::Join(conn) => {
                             if accept_players {
                                 let _success = connections.insert(conn.id, conn);
-                                host.send(to_message(to_state(&connections))).await.unwrap();
                             } else {
                                 // How to close it?
-                                host.send(to_message(to_state(&connections))).await.unwrap();
                             }
+                            host.send(to_message(to_state(&connections))).await.unwrap();
                         }
                         HostComm::Leave(conn) => {
                             connections.remove(&conn);
@@ -100,20 +99,32 @@ pub async fn game_handler(
                             host.send(to_message(to_state(&connections))).await.unwrap();
                         },
                         Command::Stop() => {
+                            let close_msg = Some(CloseFrame{code: CloseCode::Away, reason: Cow::Borrowed("The game is done.")});
+                            if let Ok(_) = host.close(close_msg).await {
+                                // Cool
+                            }
+                            let keys: Vec<_> = connections.keys().cloned().collect();
+                            for connection in keys.iter() {
+                                let val = connections.remove(connection);
+                                if let Some(mut val) = val {
+                                    if let Ok(_)  = val.sink.close().await {
+                                        // Cool
+                                    }
+                                }
+                            }
                             break;
                         },
                         Command::To { to, data } => {
                             for player in to.iter() {
-                                let dest = connections.get_mut(player).unwrap();
-                                dest.sender.send(Message::Text(data.clone())).await.unwrap();
+                                if let Some(dest) = connections.get_mut(player) {
+                                    dest.sink.send(Message::Text(data.clone())).await.unwrap();
+                                }
                             }
                         },
                         _ => {},
                     }
                 }
             },
-            // complete => break,
-            // default => unreachable!(),
         }
     }
 }
@@ -121,6 +132,7 @@ pub async fn game_handler(
 // One client handler per client;
 pub async fn client_handler(game_sender: Arc<UnboundedSender<HostComm>>, player: Player) {
     let (sink, mut stream) = player.ws.split();
+
     game_sender
         .send(HostComm::Join(PlayerSink::new(1, sink)))
         .unwrap();
