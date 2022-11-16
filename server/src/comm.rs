@@ -2,6 +2,12 @@ use std::{default::Default, fmt};
 
 use serde::{Deserialize, Serialize};
 
+use tokio::net::TcpStream;
+use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::WebSocketStream;
+
+use futures_util::stream::{SplitSink, SplitStream};
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default, Clone)]
 pub enum GameState {
     #[default]
@@ -15,37 +21,76 @@ pub enum GameState {
 
 /// Version 3
 /// The game has full control of the comms
+#[derive(Debug)]
+pub struct PlayerSink {
+    pub id: u32,
+    pub sender: SplitSink<WebSocketStream<TcpStream>, Message>,
+}
+impl PlayerSink {
+    pub fn new(id: u32, sender: SplitSink<WebSocketStream<TcpStream>, Message>) -> Self {
+        Self { id, sender }
+    }
+}
+
+#[derive(Debug)]
+pub struct PlayerStream {
+    pub id: u32,
+    pub receiver: SplitStream<WebSocketStream<TcpStream>>,
+}
+
+impl PlayerStream {
+    pub fn new(id: u32, receiver: SplitStream<WebSocketStream<TcpStream>>) -> Self {
+        Self { id, receiver }
+    }
+}
+
+#[derive(Debug)]
+pub struct Player {
+    pub id: u32,
+    pub ws: WebSocketStream<TcpStream>,
+}
+impl Player {
+    pub fn new(id: u32, ws: WebSocketStream<TcpStream>) -> Self {
+        Self { id, ws }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum Command {
     Prepare {
-        min_players: usize,
-        max_players: usize,
+        max_players: u32,
     }, // Prepares a game
     PrepareReply {
         key: String, // The game key
     },
     Start(), // Prevent players to join from this point on
     State {
-        players: Vec<usize>,
-        state: GameState,
+        players: Vec<u32>,
     },
     Kick {
-        player: usize,
+        player: u32,
     },
     Stop(),
     // Data from the user forwarded to the game
     From {
-        from: usize,
+        from: u32,
         data: String,
     },
     // Data from the game, forwarded to the user
     To {
-        to: Vec<usize>,
+        to: Vec<u32>,
         data: String,
     },
     Error {
         reason: String,
     },
+}
+
+#[derive(Debug)]
+pub enum HostComm {
+    Join(PlayerSink),
+    Leave(u32),
+    Command(Command),
 }
 
 /// Version 1
@@ -79,7 +124,7 @@ pub struct GameResponse {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GameResponseWithSource {
     pub source: String,
-    pub index: usize,
+    pub index: u32,
     pub msg: GameResponse,
 }
 
