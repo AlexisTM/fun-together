@@ -26,8 +26,8 @@ use comm::{HostComm, Player};
 static GAME_LIST: Lazy<RwLock<HashMap<String, Arc<UnboundedSender<HostComm>>>>> =
     Lazy::new(|| RwLock::new(HashMap::<String, Arc<UnboundedSender<HostComm>>>::default()));
 
-async fn accept_connection(peer: SocketAddr, stream: TcpStream) {
-    if let Err(e) = handle_connection(peer, stream).await {
+async fn accept_connection(peer: SocketAddr, stream: TcpStream, client_id: u32) {
+    if let Err(e) = handle_connection(peer, stream, client_id).await {
         match e {
             Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => (),
             err => error!("Error processing connection: {}", err),
@@ -44,7 +44,7 @@ enum ClientConfig {
 // Host -> Command -> Server -> Raw -> Client
 //   ^_______Command____| ^______Raw_____|
 
-async fn handle_connection(_peer: SocketAddr, stream: TcpStream) -> Result<()> {
+async fn handle_connection(_peer: SocketAddr, stream: TcpStream, client_id: u32) -> Result<()> {
     let mut config: Arc<ClientConfig> = Arc::new(ClientConfig::Connect("".to_owned()));
     let ws_stream = accept_hdr_async(stream, |req: &Request, response: Response| {
         let res: Vec<&str> = req.uri().path().split('/').collect();
@@ -66,14 +66,12 @@ async fn handle_connection(_peer: SocketAddr, stream: TcpStream) -> Result<()> {
     .await
     .expect("Failed to accept");
 
-    println!("{:?}", config);
-
     match &*config {
         ClientConfig::Connect(id) => {
             // If ID exists: Join to the game
             let to_game: Arc<UnboundedSender<HostComm>> =
                 { GAME_LIST.read().get(id).unwrap().clone() };
-            tokio::spawn(client_handler(to_game, Player::new(1, ws_stream)));
+            tokio::spawn(client_handler(to_game, Player::new(client_id, ws_stream)));
         }
         ClientConfig::Create(id) => {
             let (to_game, game_cmd_receiver) = unbounded_channel::<HostComm>();
@@ -95,12 +93,14 @@ async fn main() {
     let listener = TcpListener::bind(&addr).await.expect("Can't listen");
     info!("Listening on: {}", addr);
 
+    let mut client_id: u32 = 0;
     while let Ok((stream, _)) = listener.accept().await {
         let peer = stream
             .peer_addr()
             .expect("connected streams should have a peer address");
         info!("Peer address: {}", peer);
 
-        tokio::spawn(accept_connection(peer, stream));
+        client_id += 1;
+        tokio::spawn(accept_connection(peer, stream, client_id));
     }
 }

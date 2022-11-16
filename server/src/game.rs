@@ -3,20 +3,18 @@ use futures::{select, FutureExt};
 use futures_util::{SinkExt, StreamExt};
 
 use std::sync::Arc;
-use tokio::net::{TcpStream};
+use tokio::net::TcpStream;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use tokio_tungstenite::tungstenite::Error;
-use tokio_tungstenite::tungstenite::{
-    Message, Result,
-};
-use tokio_tungstenite::{WebSocketStream};
+use tokio_tungstenite::tungstenite::{Message, Result};
+use tokio_tungstenite::WebSocketStream;
 
 use std::collections::HashMap;
 
 use crate::comm::{Command, HostComm, Player, PlayerSink};
 
-pub fn read_command(msg: Option<Result<Message, Error>>) -> Option<Command> {
+fn read_command(msg: Option<Result<Message, Error>>) -> Option<Command> {
     if let Some(Ok(msg)) = msg {
         match msg {
             Message::Text(x) => {
@@ -35,6 +33,17 @@ pub fn read_command(msg: Option<Result<Message, Error>>) -> Option<Command> {
     None
 }
 
+fn to_message(command: Command) -> Message {
+    let val = serde_json::to_string(&command).unwrap();
+    Message::Text(val)
+}
+
+fn to_state(connections: &HashMap<u32, PlayerSink>) -> Command {
+    Command::State {
+        players: connections.keys().cloned().collect(),
+    }
+}
+
 // Broadcast all the incoming game state to the clients.
 // One game handler per game
 pub async fn game_handler(
@@ -49,30 +58,24 @@ pub async fn game_handler(
     loop {
         select! {
             _event = rx.recv().fuse() => {
-                if let Some(event) = rx.recv().await {
+                if let Some(event) = _event {
                     // host.send(event).await;
                     match event {
                         HostComm::Join(conn) => {
                             if accept_players {
                                 let _success = connections.insert(conn.id, conn);
-                                let val = serde_json::to_string(&Command::State {
-                                    players: connections.keys().cloned().collect(),
-                                });
-                                host.send(Message::Text(val.unwrap())).await.unwrap();
+                                host.send(to_message(to_state(&connections))).await.unwrap();
                             } else {
                                 // How to close it?
+                                host.send(to_message(to_state(&connections))).await.unwrap();
                             }
                         }
                         HostComm::Leave(conn) => {
                             connections.remove(&conn);
-                            let val = serde_json::to_string(&Command::State {
-                                players: connections.keys().cloned().collect(),
-                            });
-                            host.send(Message::Text(val.unwrap())).await.unwrap();
+                            host.send(to_message(to_state(&connections))).await.unwrap();
                         }
                         HostComm::Command(cmd) => {
-                            let val = serde_json::to_string(&cmd);
-                            host.send(Message::Text(val.unwrap())).await.unwrap();
+                            host.send(to_message(cmd)).await.unwrap();
                         }
                     }
                 }
@@ -84,17 +87,27 @@ pub async fn game_handler(
                         Command::Prepare{max_players} => {
                             max_players_ = max_players;
                             accept_players = true;
+                            host.send(to_message(to_state(&connections))).await.unwrap();
                         },
                         Command::Start() => {
                             if connections.len() <= max_players_.try_into().unwrap() {
                                 accept_players = false;
                             }
+                            host.send(to_message(to_state(&connections))).await.unwrap();
                         },
                         Command::Kick{player} => {
                             connections.remove(&player);
+                            host.send(to_message(to_state(&connections))).await.unwrap();
                         },
-                        Command::Stop() => {},
-                        Command::To { to: _, data: _ } => {}, // Send to user
+                        Command::Stop() => {
+                            break;
+                        },
+                        Command::To { to, data } => {
+                            for player in to.iter() {
+                                let dest = connections.get_mut(player).unwrap();
+                                dest.sender.send(Message::Text(data.clone())).await.unwrap();
+                            }
+                        },
                         _ => {},
                     }
                 }
