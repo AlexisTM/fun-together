@@ -61,11 +61,11 @@ pub async fn game_handler(
                 if let Some(event) = event {
                     // host.send(event).await;
                     match event {
-                        HostComm::Join(conn) => {
+                        HostComm::Join(mut conn) => {
                             if accept_players {
                                 let _success = connections.insert(conn.id, conn);
                             } else {
-                                // How to close it?
+                                if let Ok(_) = conn.sink.close().await {}
                             }
                             host.send(to_message(to_state(&connections))).await.unwrap();
                         }
@@ -82,6 +82,7 @@ pub async fn game_handler(
             event = host.next().fuse() => {
                 let cmd = read_command(event);
                 if let Some(cmd) = cmd {
+                    println!("{:?}", cmd);
                     match cmd {
                         Command::Prepare{max_players} => {
                             max_players_ = max_players;
@@ -123,6 +124,8 @@ pub async fn game_handler(
                         },
                         _ => {},
                     }
+                } else {
+                    host.send(to_message(Command::Error{reason: "Invalid message.".to_owned()})).await.unwrap();
                 }
             },
         }
@@ -145,11 +148,12 @@ pub async fn client_handler(game_sender: Arc<UnboundedSender<HostComm>>, player:
                     data: str_data,
                 }));
             } else if msg.is_close() {
-                break; // When we break, we disconnect.
+                break;
             }
         } else {
-            break; // When we break, we disconnect.
+            break;
         }
     }
+    // If this fails, the game is already finished.
     game_sender.send(HostComm::Leave(player.id)).unwrap();
 }
