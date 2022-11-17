@@ -14,18 +14,28 @@ use std::collections::HashMap;
 
 use crate::comm::{Command, HostComm, Player, PlayerSink};
 
+use ciborium;
+
 fn read_command(msg: Option<Result<Message, Error>>) -> Option<Command> {
     if let Some(Ok(msg)) = msg {
         match msg {
             Message::Text(x) => {
-                let json: Result<Command, _> = serde_json::from_str(x.as_str());
-                match json {
+                let val: Result<Command, _> = serde_json::from_str(x.as_str());
+                match val {
+                    Ok(valid_json) => return Some(valid_json),
+                    Err(_) => return None,
+                }
+            }
+            Message::Binary(x) => {
+                let val: Result<Command, _> = ciborium::de::from_reader(x.as_slice());
+                // let val: Result<Command, _> = serde_json::from_str(x.as_str());
+                match val {
                     Ok(valid_json) => return Some(valid_json),
                     Err(_) => return None,
                 }
             }
             Message::Close(_x) => {
-                return Some(Command::Stop());
+                return Some(Command::Stop);
             }
             _ => return None,
         }
@@ -34,6 +44,14 @@ fn read_command(msg: Option<Result<Message, Error>>) -> Option<Command> {
 }
 
 fn to_message(command: Command) -> Message {
+    let mut buf: Vec<u8> = Vec::new();
+    let res = ciborium::ser::into_writer(&command, &mut buf);
+    if res.is_ok() {}
+    Message::Binary(buf)
+}
+
+#[allow(dead_code)]
+fn to_json(command: Command) -> Message {
     let val = serde_json::to_string(&command).unwrap();
     Message::Text(val)
 }
@@ -55,6 +73,11 @@ pub async fn game_handler(
 
     let mut accept_players = false;
 
+    host.send(to_message(Command::Prepare { max_players: 8 }))
+        .await
+        .unwrap();
+    // host.feed(to_message(Command::Prepare { max_players: 8 })).await.unwrap();
+
     loop {
         select! {
             event = rx.recv().fuse() => {
@@ -64,9 +87,7 @@ pub async fn game_handler(
                         HostComm::Join(mut conn) => {
                             if accept_players {
                                 let _success = connections.insert(conn.id, conn);
-                            } else {
-                                if let Ok(_) = conn.sink.close().await {}
-                            }
+                            } else if (conn.sink.close().await).is_ok() {}
                             host.send(to_message(to_state(&connections))).await.unwrap();
                         }
                         HostComm::Leave(conn) => {
@@ -89,7 +110,7 @@ pub async fn game_handler(
                             accept_players = true;
                             host.send(to_message(to_state(&connections))).await.unwrap();
                         },
-                        Command::Start() => {
+                        Command::Start => {
                             if connections.len() <= max_players_.try_into().unwrap() {
                                 accept_players = false;
                             }
@@ -99,7 +120,7 @@ pub async fn game_handler(
                             connections.remove(&player);
                             host.send(to_message(to_state(&connections))).await.unwrap();
                         },
-                        Command::Stop() => {
+                        Command::Stop => {
                             let close_msg = Some(CloseFrame{code: CloseCode::Away, reason: Cow::Borrowed("The game is done.")});
                             if let Ok(_) = host.close(close_msg).await {
                                 // Cool

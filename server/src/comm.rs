@@ -56,6 +56,8 @@ impl Player {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(tag = "cmd")]
+#[serde(rename_all = "snake_case")]
 pub enum Command {
     Prepare {
         max_players: u32,
@@ -63,14 +65,14 @@ pub enum Command {
     PrepareReply {
         key: String, // The game key
     },
-    Start(), // Prevent players to join from this point on
+    Start, // Prevent players to join from this point on
     State {
         players: Vec<u32>,
     },
     Kick {
         player: u32,
     },
-    Stop(),
+    Stop,
     // Data from the user forwarded to the game
     From {
         from: u32,
