@@ -25,9 +25,9 @@ use rand::Rng;
 
 fn gen_room_code() -> String {
     let mut rng = thread_rng();
-    let random_val: u8 = rng.gen_range(65..91);
     let mut val: String = "".to_owned();
     for _ in 0..4 {
+        let random_val: u8 = rng.gen_range(65..91);
         val.push(random_val as char);
     }
     return val;
