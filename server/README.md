@@ -1,11 +1,11 @@
-WMB (Websocket multiplayer backend)
-====================================
+WMBP (Websocket multiplayer backend proxy)
+=========================================
 
 This is a pet weekend project to learn & enjoy Rust. Use at your own risk.
 
 ### Introduction
 
-WMB is a project is to help more party games to sprout by providing a backend implementation.
+WMBP is a project is to help more party games to sprout by providing a backend implementation.
 The base implementation is a one (*Game*) to many (*Clients*) connection communication pattern, which is coordinated by the *Server*, allowing **serverless party games**.
 
 The *Game* connects to the *Server* with a websocket and creates a room. Once the room is created, the *Game* will receive the **Room Code** which will be used by *Clients* to connect.
@@ -48,3 +48,11 @@ For Javascript users:
 - **\> ToStr**: `{"cmd": "to_str", to: [3, 5], "data": "some string"}` # Sends text data to the user 3 and 5
 - **< From**: `{"cmd": "from", "from": 2, "data": [1,2,3]}` # Received when user 2 sent binary data
 - **< FromStr**: `{"cmd": "from", "from": 5, "data": "some string"}` # Received when user 5 sent string data
+
+#### Messages as a client
+
+The *Client* has no specific message. Sending text (Text type for the websocket), the message will be transferred with `FromStr` to the *Game*, while sending binary data (such as CBOR encore data or images) will be forwarded with `From` to the *Game*.
+
+Whenever *Game* sends data with `To` and `ToStr`, only the data will be forwarded to the client (as everything else would be redundant) as binary or text.
+
+This means the *Client* has a connection that seems to be directly to the game.
