@@ -20,7 +20,6 @@ class Game {
             this.ws.onclose = undefined;
             this.ws.onerror = undefined;
             this.ws.onopen = undefined;
-            this.ws.onconnect = undefined;
             this.ws.onmessage = undefined;
             this.ws.close();
             this.ws = undefined;
@@ -29,11 +28,11 @@ class Game {
             this.log("[CONNECTING] to " + roomid.value + " as " + username.value);
             this.ws = new WebSocket("ws://127.0.0.1:8081/" + type);
             this.ws.binaryType = "arraybuffer";
-            this.ws.onclose = (a) => { this.log("[CLOSED] Code: " + a.code + " Reason: \"" + a.reason + "\""); }
+            this.ws.onclose = (a) => { this.log("[CLOSED] Code: " + a.code + " Reason: \"" + a.reason + "\"");}
             this.ws.onerror = (a) => { this.log("[ERROR]"); }
             this.ws.onopen = (a) => { this.log("[OPENED]"); }
-            this.ws.onconnect = (a) => { this.log("[CONNECTED]"); };
             this.ws.onmessage = (a) => {
+                this.log("[MESSAGE IN] " + a.data);
                 let msg = CBOR.decode(a.data);
                 if (msg.cmd == "prepare_reply") {
                     this.on_prepare_reply(msg);
@@ -48,7 +47,7 @@ class Game {
                 } else if (msg.cmd == "state") {
                     this.on_state(msg);
                 } else {
-                    this.log("[MESSAGE IN] Unknown message: " + JSON.stringify(CBOR.decode(a.data)));
+                    this.log("[MESSAGE IN] Unknown message: " + a.data);
                 }
             };
         }
@@ -90,8 +89,8 @@ class Game {
 
     kick(player) {
         this.send({
-            player,
             cmd: "kick",
+            player,
         })
     }
 
@@ -104,6 +103,16 @@ class Game {
     // to is an array of user id
     to(to, data) {
         this.send({
+            cmd: "to",
+            to,
+            data,
+        })
+    }
+
+    // to is an array of user id
+    to_str(to, data) {
+        this.send({
+            cmd: "to_str",
             to,
             data,
         })
@@ -113,7 +122,7 @@ class Game {
         this.log("[PREPARE_REPLY] Game key: " + data.key);
     }
     on_player_data(data) {
-        this.log("[PLAYER_DATA] " + data.from + " sent: " + data.data.text());
+        this.log("[PLAYER_DATA] " + data.from + " sent: " + data.data);
     }
     on_stop(data) {
         this.log("[STOP]");

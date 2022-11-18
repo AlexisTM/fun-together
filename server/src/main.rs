@@ -1,4 +1,5 @@
 use log::*;
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
@@ -15,7 +16,6 @@ use tokio_tungstenite::{
 use parking_lot::RwLock;
 
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
 
 pub mod comm;
 pub mod game;
