@@ -8,7 +8,7 @@ class Game {
     }
 
     connect() {
-        this.conn_start("CONNECT");
+        this.conn_start(this.roomid.value);
     }
 
     create() {
@@ -27,7 +27,7 @@ class Game {
         }
         if (this.ws == undefined) {
             this.log("[CONNECTING] to " + roomid.value + " as " + username.value);
-            this.ws = new WebSocket("ws://127.0.0.1:8081/" + type + "/" + roomid.value);
+            this.ws = new WebSocket("ws://127.0.0.1:8081/" + type);
             this.ws.binaryType = "arraybuffer";
             this.ws.onclose = (a) => { this.log("[CLOSED] Code: " + a.code + " Reason: \"" + a.reason + "\""); }
             this.ws.onerror = (a) => { this.log("[ERROR]"); }

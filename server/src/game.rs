@@ -136,25 +136,7 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
                             host.send(to_message(to_state(&connections))).await.unwrap();
                         },
                         Command::Stop => {
-                            let close_msg = Some(CloseFrame{code: CloseCode::Away, reason: Cow::Borrowed("The game is done.")});
-                            if let Ok(_) = host.close(close_msg).await {
-                                // Cool
-                            }
-                            let keys: Vec<_> = connections.keys().cloned().collect();
-                            for connection in keys.iter() {
-                                let val = connections.remove(connection);
-                                if let Some(mut val) = val {
-                                    if let Ok(_)  = val.sink.close().await {
-                                        // Cool
-                                    }
-                                }
-                            }
-                            {
-                                if let Some(room) = id.clone() {
-                                    game_list.write().remove(&room);
-                                }
-                            }
-                            return;
+                            break;
                         },
                         Command::To { to, data } => {
                             for player in to.iter() {
@@ -176,6 +158,29 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
                     host.send(to_message(Command::Error{reason: "Invalid message.".to_owned()})).await.unwrap();
                 }
             },
+            complete => {break;}
+        }
+    }
+
+    let close_msg = Some(CloseFrame {
+        code: CloseCode::Away,
+        reason: Cow::Borrowed("The game is done."),
+    });
+    if let Ok(_) = host.close(close_msg).await {
+        // Cool
+    }
+    let keys: Vec<_> = connections.keys().cloned().collect();
+    for connection in keys.iter() {
+        let val = connections.remove(connection);
+        if let Some(mut val) = val {
+            if let Ok(_) = val.sink.close().await {
+                // Cool
+            }
+        }
+    }
+    {
+        if let Some(room) = id.clone() {
+            game_list.write().remove(&room);
         }
     }
 }
