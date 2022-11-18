@@ -3,7 +3,7 @@ WMBP (Websocket multiplayer backend proxy)
 
 This is a pet weekend project to learn & enjoy Rust. Use at your own risk.
 
-### Introduction
+## Introduction
 
 WMBP is a project is to help more party games to sprout by providing a backend implementation.
 The base implementation is a one (*Game*) to many (*Clients*) connection communication pattern, which is coordinated by the *Server*, allowing **serverless party games**.
@@ -12,7 +12,7 @@ The *Game* connects to the *Server* with a websocket and creates a room. Once th
 
 While the *Game* has a mandatory communication pattern with the *Server*, the *Clients* have a **seemingly direct connection to the *Game***, both in **binary** and **text**.
 
-### Usage
+## Usage
 
 5. Spin this **Server**, `cargo run --release`
 5. **Game** creates a websocket connection to this server to create a game `new WebSocket("ws://127.0.0.1:8081/CREATE")`
@@ -26,13 +26,13 @@ While the *Game* has a mandatory communication pattern with the *Server*, the *C
 
 ![The game flow of the server](doc/flow.png)
 
-### In depth
+## In depth
 
 Then endpoint of the websocket server is defining if you are a Host client (Game) or a Player client by the websocket you created.
 - `ws://127.0.0.1:8081/CREATE` creates a new game
 - `ws://127.0.0.1:8081/ROOM` connects to a room
 
-#### Messages
+### Messages as a Game (host)
 
 The messages for the *Game* are **CBOR** encoded with the following format: `{ "cmd": "snake_case_command", "data1": 1, "data2": "data2"}`
 
@@ -49,7 +49,7 @@ For Javascript users:
 - **< From**: `{"cmd": "from", "from": 2, "data": [1,2,3]}` # Received when user 2 sent binary data
 - **< FromStr**: `{"cmd": "from", "from": 5, "data": "some string"}` # Received when user 5 sent string data
 
-#### Messages as a client
+### Messages as a client
 
 The *Client* has no specific message. Sending text (Text type for the websocket), the message will be transferred with `FromStr` to the *Game*, while sending binary data (such as CBOR encore data or images) will be forwarded with `From` to the *Game*.
 
