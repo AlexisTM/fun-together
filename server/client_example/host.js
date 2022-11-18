@@ -1,3 +1,4 @@
+var last_msg = undefined;
 class Game {
     constructor() {
         this.textarea = document.getElementById('console_output');
@@ -15,7 +16,7 @@ class Game {
         this.conn_start("CREATE");
     }
 
-    conn_start(type) {
+    conn_start(game) {
         if (this.ws != undefined && (this.ws.readyState == 2 || this.ws.readyState == 3)) {
             this.ws.onclose = undefined;
             this.ws.onerror = undefined;
@@ -25,13 +26,19 @@ class Game {
             this.ws = undefined;
         }
         if (this.ws == undefined) {
-            this.log("[CONNECTING] to " + roomid.value + " as " + username.value);
-            this.ws = new WebSocket("ws://127.0.0.1:8081/" + type);
+            if(game == "CREATE") {
+                this.log("[CONNECTING] Creating a game");
+            } else {
+                this.log("[CONNCETING] Joining the game: " + game);
+            }
+            this.ws = new WebSocket("ws://127.0.0.1:8081/" + game);
             this.ws.binaryType = "arraybuffer";
             this.ws.onclose = (a) => { this.log("[CLOSED] Code: " + a.code + " Reason: \"" + a.reason + "\"");}
             this.ws.onerror = (a) => { this.log("[ERROR]"); }
             this.ws.onopen = (a) => { this.log("[OPENED]"); }
             this.ws.onmessage = (a) => {
+                console.log(a)
+                last_msg = a;
                 this.log("[MESSAGE IN] " + a.data);
                 let msg = CBOR.decode(a.data);
                 if (msg.cmd == "prepare_reply") {
@@ -64,7 +71,7 @@ class Game {
     send(val) {
         if (this.ws != undefined && this.ws.readyState == 1) {
             this.log("[MESSAGE OUT] Data send: " + JSON.stringify(val));
-            this.ws.send(CBOR.encode(val));
+            this.ws.send(val);
         } else {
             this.log("[MESSAGE OUT] The websocket is not (Yet?) connected.");
         }
@@ -74,35 +81,39 @@ class Game {
         this.send(this.data.value);
     }
 
+    send_cbor(val) {
+        this.send_cbor(CBOR.encode(val))
+    }
+
     prepare(max_players) {
-        this.send({
+        this.send_cbor({
             cmd: "prepare",
             max_players,
         });
     }
 
     start() {
-        this.send({
+        this.send_cbor({
             cmd: "start",
         })
     }
 
     kick(player) {
-        this.send({
+        this.send_cbor({
             cmd: "kick",
             player,
         })
     }
 
     stop() {
-        this.send({
+        this.send_cbor({
             cmd: "stop",
         })
     }
 
     // to is an array of user id
     to(to, data) {
-        this.send({
+        this.send_cbor({
             cmd: "to",
             to,
             data,
@@ -111,7 +122,7 @@ class Game {
 
     // to is an array of user id
     to_str(to, data) {
-        this.send({
+        this.send_cbor({
             cmd: "to_str",
             to,
             data,
