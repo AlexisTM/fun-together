@@ -139,6 +139,13 @@ pub async fn game_handler(
                         Command::To { to, data } => {
                             for player in to.iter() {
                                 if let Some(dest) = connections.get_mut(player) {
+                                    dest.sink.send(Message::Binary(data.clone())).await.unwrap();
+                                }
+                            }
+                        },
+                        Command::ToStr { to, data } => {
+                            for player in to.iter() {
+                                if let Some(dest) = connections.get_mut(player) {
                                     dest.sink.send(Message::Text(data.clone())).await.unwrap();
                                 }
                             }
@@ -164,9 +171,14 @@ pub async fn client_handler(game_sender: Arc<UnboundedSender<HostComm>>, player:
     while let Some(msg) = stream.next().await {
         if let Ok(msg) = msg {
             if let Message::Text(str_data) = msg {
-                let _ = game_sender.send(HostComm::Command(Command::From {
+                let _ = game_sender.send(HostComm::Command(Command::FromStr {
                     from: player.id,
                     data: str_data,
+                }));
+            } else if let Message::Binary(data) = msg {
+                let _ = game_sender.send(HostComm::Command(Command::From {
+                    from: player.id,
+                    data: data,
                 }));
             } else if msg.is_close() {
                 break;

@@ -76,10 +76,18 @@ pub enum Command {
     // Data from the user forwarded to the game
     From {
         from: u32,
+        data: Vec<u8>,
+    },
+    FromStr {
+        from: u32,
         data: String,
     },
     // Data from the game, forwarded to the user
     To {
+        to: Vec<u32>,
+        data: Vec<u8>,
+    },
+    ToStr {
         to: Vec<u32>,
         data: String,
     },
