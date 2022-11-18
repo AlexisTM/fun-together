@@ -39,6 +39,8 @@ class Game {
                     this.on_prepare_reply(msg);
                 } else if (msg.cmd == "from") {
                     this.on_player_data(msg);
+                } else if (msg.cmd == "from_str") {
+                    this.on_player_data(msg);
                 } else if (msg.cmd == "stop") {
                     this.on_stop(msg);
                 } else if (msg.cmd == "error") {
@@ -111,7 +113,7 @@ class Game {
         this.log("[PREPARE_REPLY] Game key: " + data.key);
     }
     on_player_data(data) {
-        this.log("[PLAYER_DATA] " + data.from + " sent: " + data.data);
+        this.log("[PLAYER_DATA] " + data.from + " sent: " + data.data.text());
     }
     on_stop(data) {
         this.log("[STOP]");

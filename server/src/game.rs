@@ -1,10 +1,12 @@
 use futures::{select, FutureExt};
 use futures_util::{SinkExt, StreamExt};
 
+use parking_lot::RwLock;
+
 use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::net::TcpStream;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::{protocol::CloseFrame, Error, Message, Result};
@@ -15,6 +17,8 @@ use std::collections::HashMap;
 use crate::comm::{Command, HostComm, Player, PlayerSink};
 
 use ciborium;
+
+pub type GameList = Arc<RwLock<HashMap<String, Arc<UnboundedSender<HostComm>>>>>;
 
 fn read_command(msg: Option<Result<Message, Error>>) -> Option<Command> {
     if let Some(Ok(msg)) = msg {
@@ -64,19 +68,19 @@ fn to_state(connections: &HashMap<u32, PlayerSink>) -> Command {
 
 // Broadcast all the incoming game state to the clients.
 // One game handler per game
-pub async fn game_handler(
-    mut rx: UnboundedReceiver<HostComm>,
-    mut host: WebSocketStream<TcpStream>,
-) {
+pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameList) {
     let mut connections: HashMap<u32, PlayerSink> = HashMap::new();
     let mut max_players_: u32 = 0;
 
     let mut accept_players = false;
 
+    let (tx_to_here, mut rx) = unbounded_channel::<HostComm>();
+    let tx_to_here = Arc::new(tx_to_here);
     host.send(to_message(Command::Prepare { max_players: 8 }))
         .await
         .unwrap();
-    // host.feed(to_message(Command::Prepare { max_players: 8 })).await.unwrap();
+
+    let mut id: Option<String> = None;
 
     loop {
         select! {
@@ -106,9 +110,20 @@ pub async fn game_handler(
                     println!("{:?}", cmd);
                     match cmd {
                         Command::Prepare{max_players} => {
-                            max_players_ = max_players;
-                            accept_players = true;
-                            host.send(to_message(to_state(&connections))).await.unwrap();
+                            if  id.is_none() {
+                                max_players_ = max_players;
+                                accept_players = true;
+                                host.send(to_message(to_state(&connections))).await.unwrap();
+                                id = Some("ROOM".to_owned());
+                                if let Some(room) = id.clone() {
+                                    host.send(to_message(Command::PrepareReply { key: room.clone() } )).await.unwrap();
+                                    {
+                                        game_list.write().insert(room, tx_to_here.clone());
+                                    }
+                                }
+                            } else if let Some(room) = id.clone() {
+                                host.send(to_message(Command::PrepareReply { key: room } )).await.unwrap();
+                            }
                         },
                         Command::Start => {
                             if connections.len() <= max_players_.try_into().unwrap() {
@@ -134,7 +149,12 @@ pub async fn game_handler(
                                     }
                                 }
                             }
-                            break;
+                            {
+                                if let Some(room) = id.clone() {
+                                    game_list.write().remove(&room);
+                                }
+                            }
+                            return;
                         },
                         Command::To { to, data } => {
                             for player in to.iter() {
@@ -178,7 +198,7 @@ pub async fn client_handler(game_sender: Arc<UnboundedSender<HostComm>>, player:
             } else if let Message::Binary(data) = msg {
                 let _ = game_sender.send(HostComm::Command(Command::From {
                     from: player.id,
-                    data: data,
+                    data,
                 }));
             } else if msg.is_close() {
                 break;

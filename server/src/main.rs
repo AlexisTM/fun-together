@@ -2,7 +2,7 @@ use log::*;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
+use tokio::sync::mpsc::UnboundedSender;
 
 use tokio_tungstenite::{
     accept_hdr_async,
@@ -19,12 +19,15 @@ use std::collections::HashMap;
 
 pub mod comm;
 pub mod game;
-use game::{client_handler, game_handler};
+use game::{client_handler, game_handler, GameList};
 
 use comm::{HostComm, Player};
 
-static GAME_LIST: Lazy<RwLock<HashMap<String, Arc<UnboundedSender<HostComm>>>>> =
-    Lazy::new(|| RwLock::new(HashMap::<String, Arc<UnboundedSender<HostComm>>>::default()));
+static GAME_LIST: Lazy<GameList> = Lazy::new(|| {
+    Arc::new(RwLock::new(
+        HashMap::<String, Arc<UnboundedSender<HostComm>>>::default(),
+    ))
+});
 
 async fn accept_connection(peer: SocketAddr, stream: TcpStream, client_id: u32) {
     if let Err(e) = handle_connection(peer, stream, client_id).await {
@@ -38,7 +41,7 @@ async fn accept_connection(peer: SocketAddr, stream: TcpStream, client_id: u32) 
 #[derive(Debug)]
 enum ClientConfig {
     Connect(String),
-    Create(String),
+    Create,
 }
 
 // Host -> Command -> Server -> Raw -> Client
@@ -49,14 +52,15 @@ async fn handle_connection(_peer: SocketAddr, stream: TcpStream, client_id: u32)
     let ws_stream = accept_hdr_async(stream, |req: &Request, response: Response| {
         let res: Vec<&str> = req.uri().path().split('/').collect();
 
-        if res.len() != 3 || res[2].len() != 4 {
+        if res.len() != 2 {
+            // res[2].len() != 4 {
             println!("{:?}", res);
             panic!("Rejected, less than 2 params or room id != 4 . How do we do this cleanly?");
         }
-        if res[1] == "CONNECT" {
-            config = Arc::new(ClientConfig::Connect(res[2].to_owned()));
+        if res[1].len() == 4 {
+            config = Arc::new(ClientConfig::Connect(res[1].to_owned()));
         } else if res[1] == "CREATE" {
-            config = Arc::new(ClientConfig::Create(res[2].to_owned()));
+            config = Arc::new(ClientConfig::Create);
         } else {
             println!("{:?}", res);
             panic!("Rejected, type unknown. How do we do this cleanly?");
@@ -73,17 +77,8 @@ async fn handle_connection(_peer: SocketAddr, stream: TcpStream, client_id: u32)
                 { GAME_LIST.read().get(id).unwrap().clone() };
             tokio::spawn(client_handler(to_game, Player::new(client_id, ws_stream)));
         }
-        ClientConfig::Create(id) => {
-            {
-                let mut games = GAME_LIST.write();
-                if !games.contains_key(id) {
-                    let (to_game, game_cmd_receiver) = unbounded_channel::<HostComm>();
-                    games.insert(id.to_string(), Arc::new(to_game));
-                    tokio::spawn(game_handler(game_cmd_receiver, ws_stream));
-                } else {
-                    // Nope; The game already exists.
-                }
-            }
+        ClientConfig::Create => {
+            tokio::spawn(game_handler(ws_stream, GAME_LIST.clone()));
         }
     }
     // Should there be something here?
