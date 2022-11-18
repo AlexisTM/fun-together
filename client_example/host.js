@@ -14,6 +14,7 @@ class Game {
 
     create() {
         this.conn_start("CREATE");
+        game.roomid.disabled = true;
     }
 
     conn_start(game) {
@@ -131,6 +132,7 @@ class Game {
 
     on_prepare_reply(data) {
         this.log("[PREPARE_REPLY] Game key: " + data.key);
+        this.roomid.value = data.key;
     }
     on_player_data(data) {
         this.log("[PLAYER_DATA] " + data.from + " sent: " + data.data);
