@@ -46,7 +46,7 @@ class Game {
                 } else if (msg.cmd == "state") {
                     this.on_state(msg);
                 } else {
-                    this.log("[MESSAGE IN] Unknown message: ", JSON.stringify(CBOR.decode(a.data)));
+                    this.log("[MESSAGE IN] Unknown message: " + JSON.stringify(CBOR.decode(a.data)));
                 }
             };
         }

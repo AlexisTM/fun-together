@@ -165,7 +165,7 @@ pub async fn client_handler(game_sender: Arc<UnboundedSender<HostComm>>, player:
     let (sink, mut stream) = player.ws.split();
 
     game_sender
-        .send(HostComm::Join(PlayerSink::new(1, sink)))
+        .send(HostComm::Join(PlayerSink::new(player.id, sink)))
         .unwrap();
 
     while let Some(msg) = stream.next().await {

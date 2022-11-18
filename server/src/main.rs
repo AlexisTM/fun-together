@@ -74,11 +74,16 @@ async fn handle_connection(_peer: SocketAddr, stream: TcpStream, client_id: u32)
             tokio::spawn(client_handler(to_game, Player::new(client_id, ws_stream)));
         }
         ClientConfig::Create(id) => {
-            let (to_game, game_cmd_receiver) = unbounded_channel::<HostComm>();
             {
-                GAME_LIST.write().insert(id.to_string(), Arc::new(to_game));
+                let mut games = GAME_LIST.write();
+                if !games.contains_key(id) {
+                    let (to_game, game_cmd_receiver) = unbounded_channel::<HostComm>();
+                    games.insert(id.to_string(), Arc::new(to_game));
+                    tokio::spawn(game_handler(game_cmd_receiver, ws_stream));
+                } else {
+                    // Nope; The game already exists.
+                }
             }
-            tokio::spawn(game_handler(game_cmd_receiver, ws_stream));
         }
     }
     // Should there be something here?

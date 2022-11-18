@@ -46,9 +46,6 @@
         <a id="connect" class="button is-info" onclick="game.connect()">
           Connect
         </a>
-      </div>
-
-      <div class="control" style="text-align: end;">
         <a id="create" class="button is-info" onclick="game.create()">
           Create
         </a>
@@ -69,10 +66,20 @@
       </div>
 
       <div class="control" style="text-align: end;">
+        <a class="button is-info" onclick="game.prepare(3)">
+          Prepare
+        </a>
+        <a class="button is-info" onclick="game.start()">
+          Start
+        </a>
+        <a class="button is-info" onclick="game.stop()">
+          Stop
+        </a>
         <a id="send" class="button is-info" onclick="game.send_field()">
           Send
         </a>
       </div>
+
 
       <br />
       <textarea id="console_output" class="textarea" placeholder="Client output" rows="10"></textarea>
