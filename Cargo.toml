@@ -7,12 +7,13 @@ edition = "2021"
 lto = true
 
 [dependencies]
+rand = "0.8"
+
 tokio = { version="1", features = ["full"]}
 tokio-tungstenite = {version= "0.17"}
 
 futures = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["async-await", "sink", "std"] }
-
 
 log = "0.4"
 env_logger = "0.9"

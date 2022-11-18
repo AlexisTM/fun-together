@@ -82,7 +82,7 @@ class Game {
     }
 
     send_cbor(val) {
-        this.send_cbor(CBOR.encode(val))
+        this.send(CBOR.encode(val))
     }
 
     prepare(max_players) {

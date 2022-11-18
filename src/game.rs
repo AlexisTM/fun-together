@@ -20,6 +20,19 @@ use ciborium;
 
 pub type GameList = Arc<RwLock<HashMap<String, Arc<UnboundedSender<HostComm>>>>>;
 
+use rand::thread_rng;
+use rand::Rng;
+
+fn gen_room_code() -> String {
+    let mut rng = thread_rng();
+    let random_val: u8 = rng.gen_range(65..91);
+    let mut val: String = "".to_owned();
+    for _ in 0..4 {
+        val.push(random_val as char);
+    }
+    return val;
+}
+
 fn read_command(msg: Option<Result<Message, Error>>) -> Option<Command> {
     if let Some(Ok(msg)) = msg {
         match msg {
@@ -120,17 +133,27 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
                 if let Some(cmd) = cmd {
                     match cmd {
                         Command::Prepare{max_players} => {
-                            if  id.is_none() {
+                            if id.is_none() {
                                 max_players_ = max_players;
                                 accept_players = true;
                                 host.send(to_message(to_state(&connections, max_players_, accept_players))).await.unwrap();
-                                id = Some("ROOM".to_owned());
+
+                                for _ in 0..4 {
+                                    let val = gen_room_code();
+                                    if !game_list.read().contains_key(&val) {
+                                        id = Some(val);
+                                        break;
+                                    }
+                                }
+
                                 if let Some(room) = id.clone() {
                                     info!("The new game id is {:?}.", id);
                                     host.send(to_message(Command::PrepareReply { key: room.clone() } )).await.unwrap();
                                     {
                                         game_list.write().insert(room, tx_to_here.clone());
                                     }
+                                } else {
+                                    host.send(to_message(Command::Error { reason: "Failed to find a unique room key".to_owned() })).await.unwrap();
                                 }
                             } else if let Some(room) = id.clone() {
                                 host.send(to_message(Command::PrepareReply { key: room } )).await.unwrap();
