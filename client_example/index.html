@@ -5,8 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Let's play!</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
 </head>
 
 <body>
@@ -17,10 +17,10 @@
 
           <div class="columns is-centered" v-show="mode == 'login'">
             <div class="column is-5-tablet is-4-desktop is-3-widescreen">
-              <form class="box">
-                <div class="tabs is-centered">
+              <form class="box is-">
+                <div class="tabs is-centered is-toggle">
                   <ul>
-                    <li v-bind:class="{ 'is-active': start_tab == 'join' }"><a v-on:click="start_tab = 'join'">Join</a>
+                    <li class="" v-bind:class="{ 'is-active': start_tab == 'join'}"><a v-on:click="start_tab = 'join'">Join</a>
                     </li>
                     <li v-bind:class="{ 'is-active': start_tab == 'create' }"><a
                         v-on:click="start_tab = 'create'">Create</a></li>

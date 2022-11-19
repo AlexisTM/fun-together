@@ -1,7 +1,5 @@
-.tab-contents .content {
-    display: none;
-}
-
-.tab-contents .content.is-active {
-    display: block;
+/* The hero.is-info doesn't work well with tabs within a box. */
+section.hero.is-info .tabs li.is-active a {
+    color:#FFFFFF !important;
+    background-color: #485fc7 !important;
 }
