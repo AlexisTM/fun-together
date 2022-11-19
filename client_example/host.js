@@ -65,8 +65,8 @@ class Game {
                 this.ws.onmessage = (a) => {
                     last_msg = a;
                     if (this.is_host()) {
-                        this.on_log('[MESSAGE IN] ' + a.data);
                         let msg = CBOR.decode(a.data);
+                        this.on_log("[MESSAGE IN] " + JSON.stringify(msg));
                         if (msg.cmd == 'prepare_reply') {
                             this.on_prepare_reply(msg);
                         } else if (msg.cmd == 'from') {
@@ -104,8 +104,6 @@ class Game {
 
     send(val) {
         if (this.ws != undefined && this.ws.readyState == 1) {
-            this.on_log('[MESSAGE OUT] Data send: ' + JSON.stringify(val));
-            console.log("Send: ", val)
             this.ws.send(val);
         } else {
             this.on_log('[MESSAGE OUT] The websocket is not (Yet?) connected.');
@@ -113,6 +111,7 @@ class Game {
     }
 
     send_cbor(val) {
+        this.on_log('[MESSAGE OUT] Data sent: ' + JSON.stringify(val));
         this.send(CBOR.encode(val));
     }
 

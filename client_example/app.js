@@ -31,7 +31,8 @@ window.onload = () => {
             },
             stop() {
                 this.game.stop();
-                this.mode = 'login'
+                this.mode = 'login';
+                this.room_id_host = "";
             }
         },
         mounted() {

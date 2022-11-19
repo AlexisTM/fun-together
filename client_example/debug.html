@@ -31,7 +31,7 @@
       </div>
 
       <div class="control" style="text-align: end;">
-        <a id="connect" class="button is-info" onclick="game.connect()">
+        <a id="connect" class="button is-info" onclick="join()">
           Connect
         </a>
         <a id="create" class="button is-info" onclick="game.create()">
@@ -63,19 +63,60 @@
         <a class="button is-info" onclick="game.stop()">
           Stop
         </a>
-        <a id="send" class="button is-info" onclick="game.send_field()">
+        <a id="send" class="button is-info" onclick="send_field()">
           Send
         </a>
       </div>
-
-
       <br />
       <textarea id="console_output" class="textarea" placeholder="Client output" rows="10"></textarea>
       </p>
     </div>
   </section>
+  <script type="application/javascript">
+
+window.onload = () => {
+  let textarea = document.getElementById('console_output');
+  game = new Game();
+  game.on_prepare_reply = (data) => {
+    console.log(data);
+  };
+  game.on_player_data = (data) => {
+    console.log(data);
+  };
+  game.on_stop = (data) => {
+    console.log(data);
+  };
+  game.on_error = (data) => {
+    console.log(data);
+  };
+  game.on_state = (data) => {
+    console.log(data);
+  };
+  game.on_host_str = (data) => {
+    console.log("Str data: ", data);
+  }
+  game.on_host_bin = (data) => {
+    console.log("Bin data: ", CBOR.decode(data), " from message:", data);
+  }
+  game.on_ws_close = (data) => {
+    console.log(data);
+  }
+  game.on_log = (data) => {
+    textarea.value += (data + "\n");
+    textarea.scrollTop = textarea.scrollHeight;
+  }
+
+}
+function send_field() {
+  const data = document.getElementById("data");
+  game.send(data);
+}
+function join() {
+  const roomid = document.getElementById("roomid");
+  game.join(roomid.value);
+}
+  </script>
   <script src="cbor.js"></script>
-  <script src="client.js"></script>
   <script src="host.js"></script>
 </body>
 
