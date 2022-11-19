@@ -173,14 +173,26 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
                             break;
                         },
                         Command::To { to, data } => {
-                            for player in to.iter() {
+                            let dest: Vec<u32>;
+                            if to.len() == 0 {
+                                dest = connections.keys().cloned().collect();
+                            } else {
+                                dest = to;
+                            }
+                            for player in dest.iter() {
                                 if let Some(dest) = connections.get_mut(player) {
                                     dest.sink.send(Message::Binary(data.clone())).await.unwrap();
                                 }
                             }
                         },
                         Command::ToStr { to, data } => {
-                            for player in to.iter() {
+                            let dest: Vec<u32>;
+                            if to.len() == 0 {
+                                dest = connections.keys().cloned().collect();
+                            } else {
+                                dest = to;
+                            }
+                            for player in dest.iter() {
                                 if let Some(dest) = connections.get_mut(player) {
                                     dest.sink.send(Message::Text(data.clone())).await.unwrap();
                                 }

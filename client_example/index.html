@@ -14,6 +14,7 @@
     <section class="hero is-info is-fullheight">
       <div class="hero-body">
         <div class="container">
+
           <div class="columns is-centered" v-show="mode == 'login'">
             <div class="column is-5-tablet is-4-desktop is-3-widescreen">
               <form class="box">
@@ -55,48 +56,79 @@
           <div class="columns is-centered" v-show="mode == 'host'">
             <div class="column is-5-tablet is-4-desktop is-3-widescreen">
               <div class="box">
-                <div>Room ID: {{room_id_host}}</div>
-                <div>Players: {{players}}</div>
-                <div>Accept more players: {{accept_players}}</div>
-
-                <label class="label">Max players</label>
-                <div class="control has-icons-left">
-                  <input type="text" placeholder="8" v-model="max_players" class="input">
-                  <span class="icon is-small is-left">
-                    <i class="fa fa-envelope"></i>
-                  </span>
+                <div class="field">Room ID: {{room_id_host}}</div>
+                <div class="field">Players: {{players}}</div>
+                <div class="field">Accept more players: {{accept_players}}</div>
+                <div class="field">
+                  <label class="label">Max players</label>
+                  <div class="control has-icons-left">
+                    <input type="text" placeholder="8" v-model="max_players" class="input">
+                    <span class="icon is-small is-left">
+                      <i class="fa fa-envelope"></i>
+                    </span>
+                  </div>
                 </div>
-                <a class="button is-success is-fullwidth" v-on:click="game.prepare(max_players)">
+                <a class="field button is-success is-fullwidth" v-on:click="game.prepare(max_players)">
                   Prepare
                 </a>
-
-                <a class="button is-success is-fullwidth" v-on:click="game.start()">
+                <a class="field button is-success is-fullwidth" v-on:click="game.start()">
                   Start
                 </a>
-
-                <a class="button is-success is-fullwidth" v-on:click="game.stop()">
+                <div class="field">
+                  <label class="label">To: </label>
+                  <div class="control has-icons-left">
+                    <input type="text" placeholder="[]" v-model="data_to_host" class="input">
+                    <span class="icon is-small is-left">
+                      <i class="fa fa-envelope"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="label">Input str:</label>
+                  <div class="control has-icons-left">
+                    <input type="text" placeholder="{'some': 'data'}" v-model="data_input_host" class="input">
+                    <span class="icon is-small is-left">
+                      <i class="fa fa-envelope"></i>
+                    </span>
+                  </div>
+                </div>
+                <a class="field button is-success is-fullwidth"
+                  v-on:click="game.to_str(JSON.parse(data_to_host), data_input_host)">
+                  Send as String
+                </a>
+                <a class="field button is-success is-fullwidth"
+                  v-on:click="game.to_cbor(JSON.parse(data_to_host), data_input_host)">
+                  Send as CBOR
+                </a>
+                <a class="field button is-success is-fullwidth" v-on:click="stop()">
                   Stop
                 </a>
               </div>
             </div>
           </div>
+
           <div class="columns is-centered" v-show="mode == 'player'">
             <div class="column is-5-tablet is-4-desktop is-3-widescreen">
               <div class="box">
-                <label class="label">Input</label>
-                <div class="control has-icons-left">
-                  <input type="text" placeholder="{'some': 'data'}" v-model="data_input_player" class="input">
-                  <span class="icon is-small is-left">
-                    <i class="fa fa-envelope"></i>
-                  </span>
+                <div class="field">
+                  <label class="label">Input</label>
+                  <div class="control has-icons-left">
+                    <input type="text" placeholder="{'some': 'data'}" v-model="data_input_player" class="input">
+                    <span class="icon is-small is-left">
+                      <i class="fa fa-envelope"></i>
+                    </span>
+                  </div>
                 </div>
-                <a class="button is-success is-fullwidth" v-on:click="game.send(data_input_player)">
-                  Send as string
-                </a>
-
-                <a class="button is-success is-fullwidth" v-on:click="game.send_cbor(data_input_player)">
-                  Send as CBOR
-                </a>
+                <div class="field">
+                  <a class="button is-success is-fullwidth" v-on:click="game.send(data_input_player)">
+                    Send as string
+                  </a>
+                </div>
+                <div class="field">
+                  <a class="button is-success is-fullwidth" v-on:click="game.send_cbor(data_input_player)">
+                    Send as CBOR
+                  </a>
+                </div>
               </div>
             </div>
           </div>
