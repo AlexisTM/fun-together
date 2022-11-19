@@ -4,79 +4,122 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Coucou ♥</title>
+  <title>Let's play!</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <section class="section">
-    <div class="container">
-      <h1 class="title">
-        Coucou ♥
-        <br>
-      </h1>
+  <div id="app">
+    <section class="hero is-info is-fullheight">
+      <div class="hero-body">
+        <div class="container">
+          <div class="columns is-centered" v-show="mode == 'login'">
+            <div class="column is-5-tablet is-4-desktop is-3-widescreen">
+              <form class="box">
+                <div class="tabs is-centered">
+                  <ul>
+                    <li v-bind:class="{ 'is-active': start_tab == 'join' }"><a v-on:click="start_tab = 'join'">Join</a>
+                    </li>
+                    <li v-bind:class="{ 'is-active': start_tab == 'create' }"><a
+                        v-on:click="start_tab = 'create'">Create</a></li>
+                  </ul>
+                </div>
+                <div v-show="(start_tab == 'join')">
+                  <div class="field">
+                    <label for="" class="label">Room ID</label>
+                    <div class="control has-icons-left">
+                      <input type="text" placeholder="XYEX" v-model="room_id_player" class="input">
+                      <span class="icon is-small is-left">
+                        <i class="fa fa-envelope"></i>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="field is-fullwi8dth column">
+                    <a class="button is-success is-fullwidth" v-on:click="join()">
+                      Join a room
+                    </a>
+                  </div>
+                </div>
+                <div v-show="(start_tab == 'create')">
+                  <div class="field is-fullwidth column">
+                    <a class="button is-success is-fullwidth" v-on:click="create()">
+                      Create a room
+                    </a>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
 
-      <p>
-      <div class="field is-horizontal">
-        <div class="field-label is-medium">
-          <label class="label">Room ID</label>
-        </div>
-        <div class="field-body">
-          <div class="field">
-            <div class="control">
-              <input class="input is-medium" id="roomid" type="text" placeholder="Room ID" value="ROOM">
+          <div class="columns is-centered" v-show="mode == 'host'">
+            <div class="column is-5-tablet is-4-desktop is-3-widescreen">
+              <div class="box">
+                <div>Room ID: {{room_id_host}}</div>
+                <div>Players: {{players}}</div>
+                <div>Accept more players: {{accept_players}}</div>
+
+                <label class="label">Max players</label>
+                <div class="control has-icons-left">
+                  <input type="text" placeholder="8" v-model="max_players" class="input">
+                  <span class="icon is-small is-left">
+                    <i class="fa fa-envelope"></i>
+                  </span>
+                </div>
+                <a class="button is-success is-fullwidth" v-on:click="game.prepare(max_players)">
+                  Prepare
+                </a>
+
+                <a class="button is-success is-fullwidth" v-on:click="game.start()">
+                  Start
+                </a>
+
+                <a class="button is-success is-fullwidth" v-on:click="game.stop()">
+                  Stop
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="columns is-centered" v-show="mode == 'player'">
+            <div class="column is-5-tablet is-4-desktop is-3-widescreen">
+              <div class="box">
+                <label class="label">Input</label>
+                <div class="control has-icons-left">
+                  <input type="text" placeholder="{'some': 'data'}" v-model="data_input_player" class="input">
+                  <span class="icon is-small is-left">
+                    <i class="fa fa-envelope"></i>
+                  </span>
+                </div>
+                <a class="button is-success is-fullwidth" v-on:click="game.send(data_input_player)">
+                  Send as string
+                </a>
+
+                <a class="button is-success is-fullwidth" v-on:click="game.send_cbor(data_input_player)">
+                  Send as CBOR
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <div class="control" style="text-align: end;">
-        <a id="connect" class="button is-info" onclick="game.connect()">
-          Connect
-        </a>
-        <a id="create" class="button is-info" onclick="game.create()">
-          Create
-        </a>
-      </div>
-
-      <br />
-      <div class="field is-horizontal">
-        <div class="field-label is-medium">
-          <label class="label">Data</label>
-        </div>
-        <div class="field-body">
-          <div class="field">
-            <div class="control">
-              <input class="input is-medium" id="data" type="text" placeholder="Message" value="message">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="control" style="text-align: end;">
-        <a class="button is-info" onclick="game.prepare(3)">
-          Prepare
-        </a>
-        <a class="button is-info" onclick="game.start()">
-          Start
-        </a>
-        <a class="button is-info" onclick="game.stop()">
-          Stop
-        </a>
-        <a id="send" class="button is-info" onclick="game.send_field()">
-          Send
-        </a>
-      </div>
-
-
-      <br />
-      <textarea id="console_output" class="textarea" placeholder="Client output" rows="10"></textarea>
-      </p>
-    </div>
-  </section>
+    </section>
+  </div>
+  <!-- script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script-->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="cbor.js"></script>
-  <script src="client.js"></script>
+  <script src="app.js"></script>
   <script src="host.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      (document.querySelectorAll('.notification .delete') || []).forEach(($delete) => {
+        const $notification = $delete.parentNode;
+
+        $delete.addEventListener('click', () => {
+          $notification.parentNode.removeChild($notification);
+        });
+      });
+    });
+  </script>
 </body>
 
 </html>
