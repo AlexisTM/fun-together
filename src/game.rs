@@ -166,7 +166,10 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
                             host.send(to_message(to_state(&connections, max_players_, accept_players))).await.unwrap();
                         },
                         Command::Kick{player} => {
-                            connections.remove(&player);
+                            let conn = connections.remove(&player);
+                            if let Some(mut conn) = conn {
+                                conn.sink.close().await.unwrap();
+                            }
                             host.send(to_message(to_state(&connections, max_players_, accept_players))).await.unwrap();
                         },
                         Command::Stop => {
