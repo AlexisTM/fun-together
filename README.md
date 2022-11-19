@@ -12,6 +12,8 @@ The *Game* connects to the *Server* with a websocket and creates a room. Once th
 
 While the *Game* has a mandatory communication pattern with the *Server*, the *Clients* have a **seemingly direct connection to the *Game***, both in **binary** and **text**.
 
+![Server example](doc/multiplayer_proxy.png)
+
 ## Usage
 
 5. Spin this **Server**, `cargo run --release`
