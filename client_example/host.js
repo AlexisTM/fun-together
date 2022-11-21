@@ -118,7 +118,7 @@ class Game {
     prepare(max_players) {
         this.send_cbor({
             cmd: 'prepare',
-            max_players,
+            max_players: Number(max_players),
         });
     }
 

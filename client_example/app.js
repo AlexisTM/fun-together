@@ -16,6 +16,7 @@ window.onload = () => {
                 max_players: 8,
                 accept_players: false,
                 players: [],
+                game_selected: "cadavre_exquis_str",
             }
         },
         methods: {
@@ -27,6 +28,9 @@ window.onload = () => {
             create() {
                 if (this.game.create()) {
                     this.mode = 'host';
+                    if(this.game_selected == "cadavre_exquis_str") {
+                        // Some game instance
+                    }
                 }
             },
             stop() {

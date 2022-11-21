@@ -13,8 +13,7 @@
   <div id="app">
     <section class="hero is-info is-fullheight">
       <div class="hero-body">
-        <div class="container">
-
+        <div class="container" v-cloak>
           <div class="columns is-centered" v-show="mode == 'login'">
             <div class="column is-5-tablet is-4-desktop is-3-widescreen">
               <div class="box">
@@ -44,8 +43,13 @@
                     </a>
                   </div>
                 </div>
-                <div v-show="(start_tab == 'create')">
-                  <div class="field is-fullwidth column">
+                <div v-show="(start_tab == 'create')" class="is-fullwidth column">
+                  <div class="field select is-fullwidth">
+                    <select v-model="game_selected">
+                      <option value="cadavre_exquis_str">Cadavre exquis [Écris]</option>
+                    </select>
+                  </div>
+                  <div class="field">
                     <a class="button is-success is-fullwidth" v-on:click="create()">
                       Create a room
                     </a>

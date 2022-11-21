@@ -1,5 +1,9 @@
 /* The hero.is-info doesn't work well with tabs within a box. */
 section.hero.is-info .tabs li.is-active a {
-    color:#FFFFFF !important;
+    color: #FFFFFF !important;
     background-color: #485fc7 !important;
+}
+
+[v-cloak] {
+    display: none;
 }
