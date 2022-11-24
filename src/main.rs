@@ -126,12 +126,14 @@ async fn handle_request(
                     return Ok(Response::builder()
                         .status(200)
                         .header("Content-Type", "text/plain")
+                        .header("Access-Control-Allow-Origin", "*")
                         .body(Body::from(val.name.clone()))
                         .unwrap());
                 } else {
                     return Ok(Response::builder()
                         .status(404)
                         .header("Content-Type", "text/plain")
+                        .header("Access-Control-Allow-Origin", "*")
                         .body(Body::from("Game not found"))
                         .unwrap());
                 }
@@ -140,6 +142,7 @@ async fn handle_request(
                 return Ok(Response::builder()
                     .status(400)
                     .header("Content-Type", "text/plain")
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(Body::from(
                         "Either connect to a room or create one by connecting with a Websocket here.
 
