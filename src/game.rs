@@ -18,7 +18,12 @@ use crate::comm::{Command, HostComm, Player, PlayerSink};
 
 use ciborium;
 
-pub type GameList = Arc<RwLock<HashMap<String, Arc<UnboundedSender<HostComm>>>>>;
+pub struct GameConfig {
+    pub to_game: Arc<UnboundedSender<HostComm>>,
+    pub name: String,
+}
+
+pub type GameList = Arc<RwLock<HashMap<String, GameConfig>>>;
 
 use rand::thread_rng;
 use rand::Rng;
@@ -163,7 +168,10 @@ pub async fn game_handler(mut host: WebSocketStream<Upgraded>, game_list: GameLi
                                     info!("The new game id is {:?}.", id);
                                     host.send(to_message(Command::PrepareReply { key: room.clone() } )).await.unwrap();
                                     {
-                                        game_list.write().insert(room, tx_to_here.clone());
+                                        game_list.write().insert(room, GameConfig{
+                                            name: game_name.clone(),
+                                            to_game: tx_to_here.clone(),
+                                        });
                                     }
                                 } else {
                                     host.send(to_message(Command::Error { reason: "Failed to find a unique room key".to_owned() })).await.unwrap();

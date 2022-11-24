@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
@@ -17,10 +16,9 @@ use once_cell::sync::Lazy;
 
 pub mod comm;
 pub mod game;
-use game::{client_handler, game_handler, GameList};
+use game::{client_handler, game_handler, GameConfig, GameList};
 
 use comm::{HostComm, Player};
-
 
 use hyper::{
     header::{
@@ -35,16 +33,14 @@ use hyper::{
 
 static LAST_CLIENT_ID: Lazy<RwLock<u32>> = Lazy::new(|| RwLock::new(0));
 
-static GAME_LIST: Lazy<GameList> = Lazy::new(|| {
-    Arc::new(RwLock::new(
-        HashMap::<String, Arc<UnboundedSender<HostComm>>>::default(),
-    ))
-});
+static GAME_LIST: Lazy<GameList> =
+    Lazy::new(|| Arc::new(RwLock::new(HashMap::<String, GameConfig>::default())));
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum ClientConfig {
     Connect(String),
     Create,
+    Invalid,
 }
 
 // We are handling a websocket connection and sprouting the game & players.
@@ -58,11 +54,14 @@ async fn handle_connection(
         ClientConfig::Connect(id) => {
             // If ID exists: Join to the game
             let to_game: Arc<UnboundedSender<HostComm>> =
-                { GAME_LIST.read().get(&id).unwrap().clone() };
+                { GAME_LIST.read().get(&id).unwrap().to_game.clone() };
             tokio::spawn(client_handler(to_game, Player::new(client_id, ws_stream)));
         }
         ClientConfig::Create => {
             tokio::spawn(game_handler(ws_stream, GAME_LIST.clone()));
+        }
+        ClientConfig::Invalid => {
+            panic!("We tried to start a connection for an invalid client.")
         }
     }
 }
@@ -82,24 +81,15 @@ async fn handle_request(
     let res: Vec<&str> = req.uri().path().split('/').collect();
 
     if res.len() != 2 {
-        println!("{:?}", res);
-        return Ok(Response::new(Body::from(
-            "Either connect to a room or create one by connecting with a Websocket here.
-
-GET to /ROOM will fetch information about the room
-Connect to /ROOM will try to connect to the room
-Connect to /CREATE will create a room",
-        )));
-    }
-    if res[1].len() == 4 {
-        config = ClientConfig::Connect(res[1].to_owned());
-    } else if res[1] == "CREATE" {
-        config = ClientConfig::Create;
+        config = ClientConfig::Invalid;
     } else {
-        println!("{:?}", res);
-        return Ok(Response::new(Body::from(
-            "Daaaaamn;;; You shouldn't be here",
-        )));
+        if res[1].len() == 4 {
+            config = ClientConfig::Connect(res[1].to_owned());
+        } else if res[1] == "CREATE" {
+            config = ClientConfig::Create;
+        } else {
+            config = ClientConfig::Invalid;
+        }
     }
 
     let upgrade = HeaderValue::from_static("Upgrade");
@@ -107,7 +97,8 @@ Connect to /CREATE will create a room",
     let headers = req.headers();
     let key = headers.get(SEC_WEBSOCKET_KEY);
     let derived = key.map(|k| derive_accept_key(k.as_bytes()));
-    if req.method() != Method::GET
+    if config == ClientConfig::Invalid
+        || req.method() != Method::GET
         || req.version() < Version::HTTP_11
         || !headers
             .get(CONNECTION)
@@ -128,8 +119,40 @@ Connect to /CREATE will create a room",
             .unwrap_or(false)
         || key.is_none()
     {
-        // Return game name
-        return Ok(Response::new(Body::from("Hello World!")));
+        // Handle the request if we don't want to level up to Websocket mode.
+        match &config {
+            ClientConfig::Connect(str) => {
+                if let Some(val) = GAME_LIST.read().get(str) {
+                    return Ok(Response::builder()
+                        .status(200)
+                        .header("Content-Type", "text/plain")
+                        .body(Body::from(val.name.clone()))
+                        .unwrap());
+                } else {
+                    return Ok(Response::builder()
+                        .status(404)
+                        .header("Content-Type", "text/plain")
+                        .body(Body::from("Game not found"))
+                        .unwrap());
+                }
+            }
+            ClientConfig::Invalid => {
+                return Ok(Response::builder()
+                    .status(400)
+                    .header("Content-Type", "text/plain")
+                    .body(Body::from(
+                        "Either connect to a room or create one by connecting with a Websocket here.
+
+    GET to /ROOM will fetch information about the room
+    Connect to /ROOM will try to connect to the room
+    Connect to /CREATE will create a room",
+                    ))
+                    .unwrap());
+            }
+            _ => {
+                return Ok(Response::new(Body::from("Provide a valid token.")));
+            }
+        }
     }
     let ver = req.version();
 
