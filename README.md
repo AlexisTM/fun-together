@@ -40,7 +40,7 @@ The messages for the *Game* are **CBOR** encoded with the following format: `{ "
 
 For rust users, just take a look at the enum [src/comm.rs#Commands](src/comm.rs).
 For Javascript users:
-- **\> Prepare**: `{"cmd": "prepare", "max_players": 8}` # Prepares the game with the maximum number of clients
+- **\> Prepare**: `{"cmd": "prepare", "max_players": 8, "name": "test"}` # Prepares the game with the maximum number of clients
 - **< PrepareReply**: `{"cmd": "prepare_reply", "key": "ROOM"}` # On successful game creation, provides the ROOM key
 - **\> Start**: `{"cmd": "start"}` # Starts the game, prevents the clients to connect from this point on.
 - **< State**: `{"cmd": "state", "players": [5,2,3], "max_players": 8, "accept_conns": true}` # Provides information about the game, players connected, etc.

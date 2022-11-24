@@ -1,20 +1,21 @@
 use serde::{Deserialize, Serialize};
 
-use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
 use futures_util::stream::{SplitSink, SplitStream};
+
+use hyper::upgrade::Upgraded;
 
 /// Version 3
 /// The game has full control of the comms
 #[derive(Debug)]
 pub struct PlayerSink {
     pub id: u32,
-    pub sink: SplitSink<WebSocketStream<TcpStream>, Message>,
+    pub sink: SplitSink<WebSocketStream<Upgraded>, Message>,
 }
 impl PlayerSink {
-    pub fn new(id: u32, sink: SplitSink<WebSocketStream<TcpStream>, Message>) -> Self {
+    pub fn new(id: u32, sink: SplitSink<WebSocketStream<Upgraded>, Message>) -> Self {
         Self { id, sink }
     }
 }
@@ -22,11 +23,11 @@ impl PlayerSink {
 #[derive(Debug)]
 pub struct PlayerStream {
     pub id: u32,
-    pub stream: SplitStream<WebSocketStream<TcpStream>>,
+    pub stream: SplitStream<WebSocketStream<Upgraded>>,
 }
 
 impl PlayerStream {
-    pub fn new(id: u32, stream: SplitStream<WebSocketStream<TcpStream>>) -> Self {
+    pub fn new(id: u32, stream: SplitStream<WebSocketStream<Upgraded>>) -> Self {
         Self { id, stream }
     }
 }
@@ -34,10 +35,10 @@ impl PlayerStream {
 #[derive(Debug)]
 pub struct Player {
     pub id: u32,
-    pub ws: WebSocketStream<TcpStream>,
+    pub ws: WebSocketStream<Upgraded>,
 }
 impl Player {
-    pub fn new(id: u32, ws: WebSocketStream<TcpStream>) -> Self {
+    pub fn new(id: u32, ws: WebSocketStream<Upgraded>) -> Self {
         Self { id, ws }
     }
 }
@@ -48,12 +49,14 @@ impl Player {
 pub enum Command {
     Prepare {
         max_players: u32,
+        name: String,
     }, // Prepares a game
     PrepareReply {
         key: String, // The game key
     },
     Start, // Prevent players to join from this point on
     State {
+        name: String,
         players: Vec<u32>,
         max_players: u32,
         accept_conns: bool,

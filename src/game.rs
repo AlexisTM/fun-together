@@ -1,11 +1,11 @@
 use futures::{select, FutureExt};
 use futures_util::{SinkExt, StreamExt};
+use hyper::upgrade::Upgraded;
 use log::info;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::net::TcpStream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
@@ -30,7 +30,7 @@ fn gen_room_code() -> String {
         let random_val: u8 = rng.gen_range(65..91);
         val.push(random_val as char);
     }
-    return val;
+    val
 }
 
 fn read_command(msg: Option<Result<Message, Error>>) -> Option<Command> {
@@ -74,11 +74,13 @@ fn to_json(command: Command) -> Message {
 }
 
 fn to_state(
+    name: &str,
     connections: &HashMap<u32, PlayerSink>,
     max_players: u32,
     accept_conns: bool,
 ) -> Command {
     Command::State {
+        name: name.to_string(),
         players: connections.keys().cloned().collect(),
         max_players,
         accept_conns,
@@ -87,7 +89,7 @@ fn to_state(
 
 // Broadcast all the incoming game state to the clients.
 // One game handler per game
-pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameList) {
+pub async fn game_handler(mut host: WebSocketStream<Upgraded>, game_list: GameList) {
     let mut connections: HashMap<u32, PlayerSink> = HashMap::new();
     let mut max_players_: u32 = 0;
 
@@ -96,12 +98,22 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
     let (tx_to_here, mut rx) = unbounded_channel::<HostComm>();
     let tx_to_here = Arc::new(tx_to_here);
 
+    let mut game_name = "".to_owned();
+
     info!("A game started.");
     host.send(to_message(to_state(
+        &game_name,
         &connections,
         max_players_,
         accept_players,
     )))
+    .await
+    .unwrap();
+
+    host.send(to_message(Command::To {
+        to: vec![1, 2, 3],
+        data: vec![1, 2, 3],
+    }))
     .await
     .unwrap();
 
@@ -116,11 +128,11 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
                             if accept_players {
                                 let _success = connections.insert(conn.id, conn);
                             } else if (conn.sink.close().await).is_ok() {}
-                            host.send(to_message(to_state(&connections, max_players_, accept_players))).await.unwrap();
+                            host.send(to_message(to_state(&game_name,&connections, max_players_, accept_players))).await.unwrap();
                         }
                         HostComm::Leave(conn) => {
                             connections.remove(&conn);
-                            host.send(to_message(to_state(&connections, max_players_, accept_players))).await.unwrap();
+                            host.send(to_message(to_state(&game_name,&connections, max_players_, accept_players))).await.unwrap();
                         }
                         HostComm::Command(cmd) => {
                             host.send(to_message(cmd)).await.unwrap();
@@ -132,11 +144,12 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
                 let cmd = read_command(event);
                 if let Some(cmd) = cmd {
                     match cmd {
-                        Command::Prepare{max_players} => {
+                        Command::Prepare{max_players, name} => {
                             if id.is_none() {
                                 max_players_ = max_players;
                                 accept_players = true;
-                                host.send(to_message(to_state(&connections, max_players_, accept_players))).await.unwrap();
+                                game_name = name.clone();
+                                host.send(to_message(to_state(&game_name,&connections, max_players_, accept_players))).await.unwrap();
 
                                 for _ in 0..4 {
                                     let val = gen_room_code();
@@ -163,21 +176,21 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
                             if connections.len() <= max_players_.try_into().unwrap() {
                                 accept_players = false;
                             }
-                            host.send(to_message(to_state(&connections, max_players_, accept_players))).await.unwrap();
+                            host.send(to_message(to_state(&game_name,&connections, max_players_, accept_players))).await.unwrap();
                         },
                         Command::Kick{player} => {
                             let conn = connections.remove(&player);
                             if let Some(mut conn) = conn {
                                 conn.sink.close().await.unwrap();
                             }
-                            host.send(to_message(to_state(&connections, max_players_, accept_players))).await.unwrap();
+                            host.send(to_message(to_state(&game_name,&connections, max_players_, accept_players))).await.unwrap();
                         },
                         Command::Stop => {
                             break;
                         },
                         Command::To { to, data } => {
                             let dest: Vec<u32>;
-                            if to.len() == 0 {
+                            if to.is_empty() {
                                 dest = connections.keys().cloned().collect();
                             } else {
                                 dest = to;
@@ -190,7 +203,7 @@ pub async fn game_handler(mut host: WebSocketStream<TcpStream>, game_list: GameL
                         },
                         Command::ToStr { to, data } => {
                             let dest: Vec<u32>;
-                            if to.len() == 0 {
+                            if to.is_empty() {
                                 dest = connections.keys().cloned().collect();
                             } else {
                                 dest = to;
