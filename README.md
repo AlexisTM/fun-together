@@ -30,6 +30,9 @@ While the *Game* has a mandatory communication pattern with the *Server*, the *C
 
 ## In depth
 
+Game type:
+- `http://127.0.0.1:8081/ROOM` returns (in text/plain) the game type (started with Prepare)
+
 Then endpoint of the websocket server is defining if you are a Host client (Game) or a Player client by the websocket you created.
 - `ws://127.0.0.1:8081/CREATE` creates a new game
 - `ws://127.0.0.1:8081/ROOM` connects to a room
