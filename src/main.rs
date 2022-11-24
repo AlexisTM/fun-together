@@ -47,6 +47,7 @@ enum ClientConfig {
     Create,
 }
 
+// We are handling a websocket connection and sprouting the game & players.
 async fn handle_connection(
     _peer: SocketAddr,
     ws_stream: WebSocketStream<Upgraded>,
