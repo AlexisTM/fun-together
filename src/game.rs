@@ -133,6 +133,7 @@ pub async fn game_handler(mut host: WebSocketStream<Upgraded>, game_list: GameLi
                     match event {
                         HostComm::Join(mut conn) => {
                             if accept_players && connections.len() < max_players_.try_into().unwrap() {
+                                host.send(to_message(Command::PlayerJoined{player: conn.id})).await.unwrap();
                                 let _success = connections.insert(conn.id, conn);
                             } else if (conn.sink.close().await).is_ok() {}
                             host.send(to_message(to_state(&game_name,&connections, max_players_, accept_players))).await.unwrap();
