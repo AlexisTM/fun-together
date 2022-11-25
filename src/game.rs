@@ -84,11 +84,13 @@ fn to_state(
     max_players: u32,
     accept_conns: bool,
 ) -> Command {
+    let players: Vec<u32> = connections.keys().cloned().collect();
+    let accept_connections = accept_conns && players.len() < max_players.try_into().unwrap();
     Command::State {
         name: name.to_string(),
-        players: connections.keys().cloned().collect(),
+        players,
         max_players,
-        accept_conns,
+        accept_conns: accept_connections,
     }
 }
 
@@ -130,7 +132,7 @@ pub async fn game_handler(mut host: WebSocketStream<Upgraded>, game_list: GameLi
                 if let Some(event) = event {
                     match event {
                         HostComm::Join(mut conn) => {
-                            if accept_players {
+                            if accept_players && connections.len() < max_players_.try_into().unwrap() {
                                 let _success = connections.insert(conn.id, conn);
                             } else if (conn.sink.close().await).is_ok() {}
                             host.send(to_message(to_state(&game_name,&connections, max_players_, accept_players))).await.unwrap();
