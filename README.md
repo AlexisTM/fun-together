@@ -46,6 +46,7 @@ For Javascript users:
 - **\> Prepare**: `{"cmd": "prepare", "max_players": 8, "name": "test"}` # Prepares the game with the maximum number of clients
 - **< PrepareReply**: `{"cmd": "prepare_reply", "key": "ROOM"}` # On successful game creation, provides the ROOM key
 - **< PlayerJoined**: `{"cmd": "player_joined", "player": 12}` # A new player joined
+- **< PlayerLeft**: `{"cmd": "player_left", "player": 12}` # A player left
 - **\> Start**: `{"cmd": "start"}` # Starts the game, prevents the clients to connect from this point on.
 - **< State**: `{"cmd": "state", "players": [5,2,3], "max_players": 8, "accept_conns": true}` # Provides information about the game, players connected, etc.
 - **\> Kick**: `{"cmd": "kick", "player": 5}` # Kicks player with id 5 (from the State message)

@@ -140,6 +140,7 @@ pub async fn game_handler(mut host: WebSocketStream<Upgraded>, game_list: GameLi
                         }
                         HostComm::Leave(conn) => {
                             connections.remove(&conn);
+                            host.send(to_message(Command::PlayerLeft { player: conn})).await.unwrap();
                             host.send(to_message(to_state(&game_name,&connections, max_players_, accept_players))).await.unwrap();
                         }
                         HostComm::Command(cmd) => {

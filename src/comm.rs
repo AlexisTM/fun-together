@@ -54,7 +54,10 @@ pub enum Command {
     PrepareReply {
         key: String, // The game key
     },
-    PlayerJoined {
+    PlayerJoined { // A player joined
+        player: u32,
+    },
+    PlayerLeft { // A player left
         player: u32,
     },
     Start, // Prevent players to join from this point on
