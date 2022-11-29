@@ -63,3 +63,9 @@ The *Client* has no specific message. Sending text (Text type for the websocket)
 Whenever *Game* sends data with `To` and `ToStr`, only the data will be forwarded to the client (as everything else would be redundant) as binary or text.
 
 This means the *Client* has a connection that seems to be directly to the game.
+
+### Features
+
+#### tls
+
+In a wim, I quickly made a TLS feature based on `rustls`, following the example in [hyper-rustls](https://github.com/rustls/hyper-rustls/tree/main/examples). Only later on I understood this was the responsibilty of the cloud service (or nginx or other) in most cases.
