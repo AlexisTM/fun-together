@@ -69,3 +69,4 @@ This means the *Client* has a connection that seems to be directly to the game.
 #### tls
 
 In a wim, I quickly made a TLS feature based on `rustls`, following the example in [hyper-rustls](https://github.com/rustls/hyper-rustls/tree/main/examples). Only later on I understood this was the responsibilty of the cloud service (or nginx or other) in most cases.
+I have no clue what I am doing 🙈
