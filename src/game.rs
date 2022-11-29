@@ -201,12 +201,11 @@ pub async fn game_handler(mut host: WebSocketStream<Upgraded>, game_list: GameLi
                             break;
                         },
                         Command::To { to, data } => {
-                            let dest: Vec<u32>;
-                            if to.is_empty() {
-                                dest = connections.keys().cloned().collect();
+                            let dest: Vec<u32> = if to.is_empty() {
+                                connections.keys().cloned().collect()
                             } else {
-                                dest = to;
-                            }
+                                to
+                            };
                             for player in dest.iter() {
                                 if let Some(dest) = connections.get_mut(player) {
                                     dest.sink.send(Message::Binary(data.clone())).await.unwrap();
@@ -214,12 +213,11 @@ pub async fn game_handler(mut host: WebSocketStream<Upgraded>, game_list: GameLi
                             }
                         },
                         Command::ToStr { to, data } => {
-                            let dest: Vec<u32>;
-                            if to.is_empty() {
-                                dest = connections.keys().cloned().collect();
+                            let dest: Vec<u32> = if to.is_empty() {
+                                connections.keys().cloned().collect()
                             } else {
-                                dest = to;
-                            }
+                                to
+                            };
                             for player in dest.iter() {
                                 if let Some(dest) = connections.get_mut(player) {
                                     dest.sink.send(Message::Text(data.clone())).await.unwrap();

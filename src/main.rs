@@ -1,31 +1,36 @@
+pub mod comm;
+pub mod game;
+#[cfg(feature = "tls")]
+pub mod tls;
+
 use std::collections::HashMap;
 use std::convert::Infallible;
+use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::mpsc::UnboundedSender;
+
+use tokio::{sync::mpsc::UnboundedSender};
+use tokio_tungstenite::tungstenite::handshake::derive_accept_key;
 use tokio_tungstenite::tungstenite::protocol::Role;
 use tokio_tungstenite::WebSocketStream;
 
-use std::env;
-
-use tokio_tungstenite::tungstenite::handshake::derive_accept_key;
-
+use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 
-use once_cell::sync::Lazy;
-
-pub mod comm;
-pub mod game;
+use comm::{HostComm, Player};
 use game::{client_handler, game_handler, GameConfig, GameList};
 
-use comm::{HostComm, Player};
+#[cfg(feature = "tls")]
+use tls::get_tls_cfg;
+#[cfg(feature = "tls")]
+use hyper::server::conn::AddrIncoming;
 
 use hyper::{
     header::{
         HeaderValue, CONNECTION, SEC_WEBSOCKET_ACCEPT, SEC_WEBSOCKET_KEY, SEC_WEBSOCKET_VERSION,
         UPGRADE,
     },
-    server::conn::AddrStream,
+    server::conn::{AddrStream},
     service::{make_service_fn, service_fn},
     upgrade::Upgraded,
     Body, Method, Request, Response, Server, StatusCode, Version,
@@ -45,7 +50,6 @@ enum ClientConfig {
 
 // We are handling a websocket connection and sprouting the game & players.
 async fn handle_connection(
-    _peer: SocketAddr,
     ws_stream: WebSocketStream<Upgraded>,
     client_id: u32,
     config: ClientConfig,
@@ -67,10 +71,7 @@ async fn handle_connection(
 }
 
 // Either reply in HTTP or upgrade to websocket
-async fn handle_request(
-    mut req: Request<Body>,
-    addr: SocketAddr,
-) -> Result<Response<Body>, Infallible> {
+async fn handle_request(mut req: Request<Body>) -> Result<Response<Body>, Infallible> {
     let new_client_id: u32 = {
         let mut id = LAST_CLIENT_ID.write();
         *id += 1;
@@ -82,14 +83,12 @@ async fn handle_request(
 
     if res.len() != 2 {
         config = ClientConfig::Invalid;
+    } else if res[1].len() == 4 {
+        config = ClientConfig::Connect(res[1].to_owned());
+    } else if res[1] == "CREATE" {
+        config = ClientConfig::Create;
     } else {
-        if res[1].len() == 4 {
-            config = ClientConfig::Connect(res[1].to_owned());
-        } else if res[1] == "CREATE" {
-            config = ClientConfig::Create;
-        } else {
-            config = ClientConfig::Invalid;
-        }
+        config = ClientConfig::Invalid;
     }
 
     let upgrade = HeaderValue::from_static("Upgrade");
@@ -163,7 +162,6 @@ async fn handle_request(
         match hyper::upgrade::on(&mut req).await {
             Ok(upgraded) => {
                 handle_connection(
-                    addr,
                     WebSocketStream::from_raw_socket(upgraded, Role::Server, None).await,
                     new_client_id,
                     config,
@@ -196,13 +194,26 @@ async fn main() -> Result<(), hyper::Error> {
         .parse()
         .unwrap();
 
-    let make_svc = make_service_fn(move |conn: &AddrStream| {
-        let remote_addr = conn.remote_addr();
-        let service = service_fn(move |req| handle_request(req, remote_addr));
-        async move { Ok::<_, Infallible>(service) }
-    });
 
-    let server = Server::bind(&addr).serve(make_svc);
+    #[cfg(feature = "tls")]
+    let server = {
+        let incoming = AddrIncoming::bind(&addr)?;
+        let tls_cfg = get_tls_cfg();
+        let make_svc = make_service_fn(move |_conn: &tls::TlsStream| {
+            let service = service_fn(handle_request);
+            async move { Ok::<_, Infallible>(service) }
+        });
+        Server::builder(tls::TlsAcceptor::new(tls_cfg, incoming)).serve(make_svc)
+    };
+
+    #[cfg(not(feature = "tls"))]
+    let server = {
+        let make_svc = make_service_fn(move |_: &AddrStream| {
+            let service = service_fn(handle_request);
+            async move { Ok::<_, Infallible>(service) }
+        });
+        Server::bind(&addr).serve(make_svc)
+    };
 
     server.await?;
 

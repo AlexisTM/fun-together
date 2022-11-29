@@ -29,7 +29,7 @@
                 <div v-show="(start_tab == 'join')">
                   <div class="field">
                     <label for="" class="label">Room ID</label>
-                    <div class="control has-icons-left">
+                    <div class="control">
                       <input type="text" placeholder="XYEX" v-model="room_id_player" class="input"
                         @keyup.enter="join()">
                       <span class="icon is-small is-left">
@@ -67,7 +67,7 @@
                 <div class="field">Accept more players: {{accept_players}}</div>
                 <div class="field">
                   <label class="label">Max players</label>
-                  <div class="control has-icons-left">
+                  <div class="control">
                     <input type="text" placeholder="8" v-model="max_players" class="input">
                     <span class="icon is-small is-left">
                       <i class="fa fa-envelope"></i>
@@ -82,7 +82,7 @@
                 </a>
                 <div class="field">
                   <label class="label">To: </label>
-                  <div class="control has-icons-left">
+                  <div class="control">
                     <input type="text" placeholder="[]" v-model="data_to_host" class="input">
                     <span class="icon is-small is-left">
                       <i class="fa fa-envelope"></i>
@@ -91,7 +91,7 @@
                 </div>
                 <div class="field">
                   <label class="label">Input str:</label>
-                  <div class="control has-icons-left">
+                  <div class="control">
                     <input type="text" placeholder="{'some': 'data'}" v-model="data_input_host" class="input"
                       @keyup.enter="game.to_str(JSON.parse(data_to_host), data_input_host)">
                     <span class="icon is-small is-left">
@@ -119,7 +119,7 @@
               <div class="box">
                 <div class="field">
                   <label class="label">Input</label>
-                  <div class="control has-icons-left">
+                  <div class="control">
                     <input type="text" placeholder="{'some': 'data'}" v-model="data_input_player" class="input"
                       @keyup.enter="game.send(data_input_player)">
                     <span class="icon is-small is-left">
