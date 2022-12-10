@@ -1,33 +1,17 @@
-FROM rust:latest as builder
+# Use the official Rust image.
+# https://hub.docker.com/_/rust
+FROM rust:1.65.0
 
-# Make a fake Rust app to keep a cached layer of compiled crates
-RUN USER=root cargo new app
+# Copy local code to the container image.
 WORKDIR /usr/src/app
-COPY Cargo.toml Cargo.lock ./
-# Needs at least a main.rs file with a main function
-RUN mkdir src && echo "fn main(){}" > src/main.rs
-# Will build all dependent crates in release mode
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/src/app/target \
-    cargo build --release
-
-# Copy the rest
 COPY . .
-# Build (install) the actual binaries
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/src/app/target \
-    cargo install --path .
 
-# Runtime image
-FROM debian:bullseye-slim
+# Install production dependencies and build a release artifact.
+RUN cargo install
 
-# Run as "app" user
-RUN useradd -ms /bin/bash app
+# Service must listen to $PORT environment variable.
+# This default value facilitates local development.
+ENV PORT 8080
 
-USER app
-WORKDIR /app
-
-# Get compiled binaries from builder's cargo install directory
-COPY --from=builder /usr/local/cargo/bin/fun-together-server /app/fun-together-server
-
-# No CMD or ENTRYPOINT, see fly.toml with `cmd` override.
+# Run the web service on container startup.
+CMD ["fun-together-server", "0.0.0.0:8080"]
