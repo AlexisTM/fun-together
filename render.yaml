@@ -1,0 +1,23 @@
+services:
+  # A Docker web service
+  - type: web
+    name: fun-together
+    env: rust
+    repo: github.com/AlexisTM/fun-together
+    region: frankfurt
+    plan: free
+    branch: main
+    numInstances: 1
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 10000
+    buildFilter:
+      paths:
+      - Cargo.toml
+      - src
+      - Dockerfile
+      ignoredPaths:
+      - client_example
+    buildCommand: cargo build --release
+    startCommand: cargo run --release 0.0.0.0:10000
