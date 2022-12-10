@@ -76,6 +76,8 @@ I have no clue what I am doing 🙈
 
 #### Render.com
 
+Either you try the blueprint (render.yaml provided) or you create a new app with:
+- Set the repo to this one
 - Define the PORT environment variable as `10000`, this fasten the spinup of the machines
 - Set the build command as `cargo build --release`
 - Set the run command as `cargo run --release 0.0.0.0:10000`
