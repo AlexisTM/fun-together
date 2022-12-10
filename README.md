@@ -64,9 +64,29 @@ Whenever *Game* sends data with `To` and `ToStr`, only the data will be forwarde
 
 This means the *Client* has a connection that seems to be directly to the game.
 
-### Features
+### Optional features
 
 #### tls
 
 In a wim, I quickly made a TLS feature based on `rustls`, following the example in [hyper-rustls](https://github.com/rustls/hyper-rustls/tree/main/examples). Only later on I understood this was the responsibilty of the cloud service (or nginx or other) in most cases.
 I have no clue what I am doing 🙈
+
+
+### Deploy
+
+#### Render.com
+
+- Define the PORT environment variable as `10000`, this fasten the spinup of the machines
+- Set the build command as `cargo build --release`
+- Set the run command as `cargo run --release 0.0.0.0:10000`
+
+#### Google Cloud
+
+Create a new project, and, using the PROJECT_ID you created:
+
+```bash
+gcloud config set project PROJECT_ID
+gcloud run deploy
+```
+
+You can [Delete your ressources here](https://console.cloud.google.com/iam-admin/projects?utm_source=cloud.google.com)
