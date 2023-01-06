@@ -3,7 +3,7 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use tokio::{sync::mpsc::UnboundedSender};
+use tokio::sync::mpsc::UnboundedSender;
 use tokio_tungstenite::tungstenite::handshake::derive_accept_key;
 use tokio_tungstenite::tungstenite::protocol::Role;
 use tokio_tungstenite::WebSocketStream;
@@ -15,16 +15,16 @@ use crate::comm::{HostComm, Player};
 use crate::game::{client_handler, game_handler, GameConfig, GameList};
 
 #[cfg(feature = "tls")]
-use tls::get_tls_cfg;
-#[cfg(feature = "tls")]
 use hyper::server::conn::AddrIncoming;
+#[cfg(feature = "tls")]
+use tls::get_tls_cfg;
 
 use hyper::{
     header::{
         HeaderValue, CONNECTION, SEC_WEBSOCKET_ACCEPT, SEC_WEBSOCKET_KEY, SEC_WEBSOCKET_VERSION,
         UPGRADE,
     },
-    server::conn::{AddrStream},
+    server::conn::AddrStream,
     service::{make_service_fn, service_fn},
     upgrade::Upgraded,
     Body, Method, Request, Response, Server, StatusCode, Version,
@@ -177,7 +177,6 @@ async fn handle_request(mut req: Request<Body>) -> Result<Response<Body>, Infall
         .append("ILoveRust", "Yes, I do.".parse().unwrap());
     Ok(res)
 }
-
 
 pub async fn service(addr: SocketAddr) -> Result<(), hyper::Error> {
     #[cfg(feature = "tls")]

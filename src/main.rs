@@ -1,11 +1,9 @@
 pub mod comm;
-pub mod game;
 pub mod entry;
+pub mod game;
 
 #[cfg(feature = "tls")]
 pub mod tls;
-
-use tokio;
 
 use crate::entry::service;
 use std::env;

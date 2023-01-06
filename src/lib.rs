@@ -1,14 +1,12 @@
 pub mod comm;
-pub mod game;
 pub mod entry;
+pub mod game;
 
 #[cfg(feature = "tls")]
 pub mod tls;
 
-
 use crate::entry::service;
 
-use shuttle_service;
 struct PoolService {}
 
 #[shuttle_service::async_trait]
