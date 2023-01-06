@@ -184,16 +184,17 @@ async fn handle_request(mut req: Request<Body>) -> Result<Response<Body>, Infall
     Ok(res)
 }
 
-#[tokio::main]
-async fn main() -> Result<(), hyper::Error> {
-    env_logger::init();
 
+async fn service(addr: SocketAddr) -> Result<(), hyper::Error> {
+    // env_logger::init();
+
+    /*
     let addr: SocketAddr = env::args()
         .nth(1)
         .unwrap_or_else(|| "127.0.0.1:8081".to_string())
         .parse()
         .unwrap();
-
+  */
 
     #[cfg(feature = "tls")]
     let server = {
@@ -218,4 +219,24 @@ async fn main() -> Result<(), hyper::Error> {
     server.await?;
 
     Ok::<_, hyper::Error>(())
+}
+
+
+use shuttle_service;
+struct PoolService {}
+
+#[shuttle_service::async_trait]
+impl shuttle_service::Service for PoolService {
+    async fn bind(
+        mut self: Box<Self>,
+        addr: std::net::SocketAddr,
+    ) -> Result<(), shuttle_service::error::Error> {
+        service(addr).await.unwrap();
+        Ok(())
+    }
+}
+
+#[shuttle_service::main]
+async fn init() -> Result<PoolService, shuttle_service::Error> {
+    Ok(PoolService {})
 }

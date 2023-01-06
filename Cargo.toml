@@ -5,7 +5,7 @@ edition = "2021"
 
 [profile.release]
 lto = true
-
+[lib]
 [dependencies]
 rand = "0.8"
 
@@ -21,9 +21,9 @@ rustls-pemfile = { version = "1", optional = true }
 
 futures = "0.3"
 futures-util = { version = "0.3", default-features = false, features = [
-    "async-await",
-    "sink",
-    "std",
+  "async-await",
+  "sink",
+  "std",
 ] }
 
 log = "0.4"
@@ -36,6 +36,8 @@ ciborium = "0.2"
 
 # RwLock & reentrant mutex
 parking_lot = { version = "0.12" }
+
+shuttle-service = { version = "0.8", features = []}
 
 [features]
 tls = []
