@@ -5,7 +5,15 @@ edition = "2021"
 
 [profile.release]
 lto = true
+
 [lib]
+name = "fun_together_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fun_together_server"
+path = "src/main.rs"
+
 [dependencies]
 rand = "0.8"
 
