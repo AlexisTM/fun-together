@@ -469,15 +469,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fun-shuttle"
-version = "0.1.0"
-dependencies = [
- "fun-together",
- "shuttle-runtime",
- "tokio",
-]
-
-[[package]]
 name = "fun-together"
 version = "0.1.2"
 dependencies = [
@@ -495,6 +486,7 @@ dependencies = [
  "rustls-pemfile",
  "serde",
  "serde_json",
+ "shuttle-runtime",
  "tokio",
  "tokio-rustls",
  "tokio-tungstenite",
