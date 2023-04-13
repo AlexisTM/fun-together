@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 fun-together = { path = "../common" }
-shuttle-runtime = { version = "0.13.0" }
+shuttle-runtime = { version = "0.14.0" }
 tokio = { version = "1", features = ["full"] }
