@@ -1663,9 +1663,9 @@ dependencies = [
 
 [[package]]
 name = "shuttle-codegen"
-version = "0.13.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1099301a3437f6503db81271975e644c5e1aad9fe6170025e38f5e2f3e1ead79"
+checksum = "40dfdf603ff9f81a595e15f8250af8638175213de77e1be6cf145daff5c58103"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -1675,9 +1675,9 @@ dependencies = [
 
 [[package]]
 name = "shuttle-common"
-version = "0.13.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20e5f49c3ea8bc7c6ff3bc1c28c684849352c9cca1387b176970b421a96ab2ba"
+checksum = "5069c36fbc9cbf86b0a620080d6ca4e8d57b3cbae107e93aae43162c4e310792"
 dependencies = [
  "async-trait",
  "axum",
@@ -1712,9 +1712,9 @@ dependencies = [
 
 [[package]]
 name = "shuttle-proto"
-version = "0.13.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b87f6be4af7b511219d9039d3d54ec452fafe66ed9feb8e008061ca6d90c7099"
+checksum = "6a56a380a4160cf999fdc72d4f3c93623f770607bf1ac9e7c7793def7bff0d0f"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1724,16 +1724,15 @@ dependencies = [
  "shuttle-common",
  "tokio",
  "tonic",
- "tonic-build",
  "tower",
  "tracing",
 ]
 
 [[package]]
 name = "shuttle-runtime"
-version = "0.13.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8ebc8c57f9f366488b85e54cc0bb61a47d22ceb2dd45d6090034ba55676c7e1"
+checksum = "f64cea553c3afd09409d495a416d8fae2d6799c12545c16b80289869b9f825b3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1757,9 +1756,9 @@ dependencies = [
 
 [[package]]
 name = "shuttle-service"
-version = "0.13.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cc895240b1a94c80d195e951718fe2bbe10249114cc26c5fb5cd500890b8a21"
+checksum = "759851cd18ef74c1243dc3c1e9acac833b197275566eca78d6d773774614a053"
 dependencies = [
  "anyhow",
  "async-trait",
