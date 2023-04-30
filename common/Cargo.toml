@@ -1,0 +1,49 @@
+[package]
+name = "fun-together"
+version = "0.1.2"
+edition = "2021"
+
+[profile.release]
+lto = true
+
+[[bin]]
+name = "fun_together"
+path = "src/main.rs"
+
+[dependencies]
+rand = "0.8"
+
+tokio = { version = "1", features = ["full"] }
+hyper = { version = "0.14", features = ["full"] }
+tokio-tungstenite = { version = "0.18.0", features = ["rustls"] }
+
+# TLS features
+rustls = { version = "0.20", optional = true }
+hyper-rustls = { version = "0.23", optional = true }
+tokio-rustls = { version = "0.23", optional = true }
+rustls-pemfile = { version = "1", optional = true }
+
+futures = "0.3"
+futures-util = { version = "0.3", default-features = false, features = [
+  "async-await",
+  "sink",
+  "std",
+] }
+
+log = "0.4"
+env_logger = "0.10.0"
+once_cell = "1.16"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ciborium = "0.2"
+
+# RwLock & reentrant mutex
+parking_lot = { version = "0.12" }
+
+[features]
+tls = []
+
+# For sky.io
+[experimental]
+cmd = "fun-together-server 0.0.0.0:8080"
